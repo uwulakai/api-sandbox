@@ -1,6 +1,7 @@
 from collections.abc import AsyncIterator
 import logging
 
+from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlmodel import SQLModel
 
@@ -22,9 +23,10 @@ async def get_session() -> AsyncIterator[AsyncSession]:
     async with session_factory() as session:
         try:
             yield session
-        except Exception:
-            logger.exception("Database session failed; rolling back transaction")
+        except Exception as exc:
             await session.rollback()
+            if not isinstance(exc, HTTPException):
+                logger.exception("Database session failed; rolling back transaction")
             raise
 
 

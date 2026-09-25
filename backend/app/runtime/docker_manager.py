@@ -1,4 +1,5 @@
 import json
+import logging
 import time
 
 import docker
@@ -6,6 +7,9 @@ from docker.models.containers import Container
 
 from app.config import settings
 from app.entities.models import Mock, MockEndpoint
+
+
+logger = logging.getLogger("api_sandbox.runtime_worker.docker")
 
 
 class DockerRuntimeManager:
@@ -59,6 +63,7 @@ class DockerRuntimeManager:
         container = self.find(mock)
         if container is None:
             return
+        logger.info("Removing existing mock container: mock_id=%s container_id=%s", mock.id, container.id)
         try:
             container.stop(timeout=10)
         except docker.errors.APIError:
@@ -66,6 +71,13 @@ class DockerRuntimeManager:
         container.remove(force=True)
 
     def create(self, mock: Mock, endpoints: list[MockEndpoint]) -> Container:
+        logger.info(
+            "Creating mock container: mock_id=%s image=%s network=%s endpoint_count=%s",
+            mock.id,
+            settings.mock_runtime_image,
+            settings.mock_network_name,
+            len(endpoints),
+        )
         container = self.client.containers.run(
             settings.mock_runtime_image,
             detach=True,
@@ -86,6 +98,11 @@ class DockerRuntimeManager:
             container.reload()
             health = container.attrs.get("State", {}).get("Health", {})
             if health.get("Status") == "healthy":
+                logger.info(
+                    "Mock container became healthy: mock_id=%s container_id=%s",
+                    mock.id,
+                    container.id,
+                )
                 return container
             if container.status in {"exited", "dead"}:
                 raise RuntimeError(f"Mock container exited during startup: {container.status}")

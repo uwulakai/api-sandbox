@@ -67,6 +67,13 @@ def create_app() -> FastAPI:
         request_id = request.headers.get("X-Request-ID") or str(uuid4())
         request.state.request_id = request_id
         started_at = perf_counter()
+        logger.info(
+            "HTTP request started: request_id=%s method=%s path=%s client=%s",
+            request_id,
+            request.method,
+            request.url.path,
+            request.client.host if request.client else "unknown",
+        )
 
         try:
             response = await call_next(request)

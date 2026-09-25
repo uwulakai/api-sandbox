@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from time import monotonic
 
 from sqlalchemy import select
 
@@ -10,7 +11,7 @@ from app.entities.models import Mock, MockEndpoint
 from app.runtime.docker_manager import DockerRuntimeManager
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("api_sandbox.runtime_worker")
 
 
 async def reconcile_once(manager: DockerRuntimeManager) -> None:
@@ -19,6 +20,13 @@ async def reconcile_once(manager: DockerRuntimeManager) -> None:
             select(Mock).where(Mock.runtime_status == MockRuntimeStatus.PENDING)
         )
         mocks = list(result.scalars().all())
+
+    if mocks:
+        logger.info(
+            "Pending mocks found: count=%s mock_ids=%s",
+            len(mocks),
+            ",".join(mock.id for mock in mocks),
+        )
 
     for mock in mocks:
         async with session_factory() as session:
@@ -32,6 +40,11 @@ async def reconcile_once(manager: DockerRuntimeManager) -> None:
                 else MockRuntimeStatus.STARTING
             )
             await session.commit()
+            logger.info(
+                "Mock reconciliation started: mock_id=%s desired_status=%s",
+                current.id,
+                current.desired_status.value,
+            )
 
             endpoints_result = await session.execute(
                 select(MockEndpoint).where(MockEndpoint.mock_id == current.id)
@@ -69,10 +82,26 @@ async def reconcile_once(manager: DockerRuntimeManager) -> None:
                     await session.delete(endpoint)
                 await session.delete(completed)
             await session.commit()
+        logger.info(
+            "Mock reconciliation completed: mock_id=%s runtime_status=%s",
+            current.id,
+            "stopped" if current.desired_status == MockDesiredStatus.STOPPED else "running",
+        )
 
 
 async def run_worker() -> None:
+    logging.basicConfig(
+        level=getattr(logging, settings.log_level.upper(), logging.INFO),
+        format="%(asctime)s %(levelname)s %(name)s %(message)s",
+    )
     manager = DockerRuntimeManager()
+    logger.info(
+        "Runtime worker started: poll_seconds=%s image=%s network=%s",
+        settings.runtime_worker_poll_seconds,
+        settings.mock_runtime_image,
+        settings.mock_network_name,
+    )
+    last_heartbeat = monotonic()
     while True:
         try:
             await reconcile_once(manager)
@@ -80,6 +109,9 @@ async def run_worker() -> None:
             # A transient database/Docker error must not terminate the worker.
             # The next polling cycle will retry reconciliation.
             logger.exception("Runtime reconciliation cycle failed")
+        if monotonic() - last_heartbeat >= 30:
+            logger.info("Runtime worker heartbeat: alive=true")
+            last_heartbeat = monotonic()
         await asyncio.sleep(settings.runtime_worker_poll_seconds)
 
 
