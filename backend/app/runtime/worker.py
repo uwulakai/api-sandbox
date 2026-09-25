@@ -74,7 +74,12 @@ async def reconcile_once(manager: DockerRuntimeManager) -> None:
 async def run_worker() -> None:
     manager = DockerRuntimeManager()
     while True:
-        await reconcile_once(manager)
+        try:
+            await reconcile_once(manager)
+        except Exception:  # noqa: BLE001
+            # A transient database/Docker error must not terminate the worker.
+            # The next polling cycle will retry reconciliation.
+            logger.exception("Runtime reconciliation cycle failed")
         await asyncio.sleep(settings.runtime_worker_poll_seconds)
 
 
