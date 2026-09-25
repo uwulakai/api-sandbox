@@ -7,7 +7,7 @@
 - `backend/api` — публичный control-plane API.
 - `backend/runtime_worker` — синхронизация состояния Mock-серверов с Docker.
 - `mock_runtime` — фиксированный runtime-образ одной API-заглушки.
-- `mock_gateway` — внутренний Traefik gateway для маршрутизации запросов к Mock-контейнерам.
+- `mock_gateway` — внутренний HTTP gateway для маршрутизации запросов к Mock-контейнерам по Docker DNS.
 - PostgreSQL — пользователи, сессии, Mock-серверы и endpoints.
 
 Пользователь управляет только декларативным контрактом API. Docker image, command, network, volumes и лимиты ресурсов задаются платформой.
@@ -35,6 +35,8 @@ docker compose up --build -d postgres api runtime_worker mock_gateway
 ```
 
 В Dokploy `public_network` должна быть подключена к сети, в которой работает внешний Traefik. Домен `mock-server.api-sandbox.merlant.xyz` направляется на `mock_gateway:8080`.
+
+Внешний Traefik/Dokploy используется только для TLS и передачи запроса в `mock_gateway`. Mock-контейнеры не содержат Traefik labels и не предоставляют gateway доступ к Docker socket.
 
 ## API
 

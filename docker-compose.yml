@@ -71,17 +71,11 @@ services:
     restart: unless-stopped
 
   mock_gateway:
-    image: traefik:${TRAEFIK_VERSION:-v3.6.7}
-    command:
-      - --providers.docker=true
-      - --providers.docker.endpoint=unix:///var/run/docker.sock
-      - --providers.docker.exposedbydefault=false
-      - --providers.docker.constraints=Label(`com.api-sandbox.managed`, `true`)
-      - --entrypoints.web.address=:8080
-      - --api.dashboard=false
-      - --log.level=${TRAEFIK_LOG_LEVEL:-INFO}
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+    build:
+      context: ./mock_gateway
+    environment:
+      MOCK_RUNTIME_PORT: ${MOCK_RUNTIME_PORT:-8080}
+      MOCK_RUNTIME_CONTAINER_PREFIX: ${MOCK_RUNTIME_CONTAINER_PREFIX:-api-sandbox-mock-}
     networks:
       - mocks_network
       - public_network

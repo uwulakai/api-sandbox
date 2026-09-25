@@ -1,6 +1,5 @@
 import json
 import time
-from urllib.parse import urlparse
 
 import docker
 from docker.models.containers import Container
@@ -21,23 +20,11 @@ class DockerRuntimeManager:
 
     @staticmethod
     def labels(mock: Mock) -> dict[str, str]:
-        mock_host = urlparse(settings.mock_public_base_url).hostname or "localhost"
-        router_name = f"mock-{mock.id}"
         return {
             "com.api-sandbox.managed": "true",
             "com.api-sandbox.mock-id": mock.id,
             "com.api-sandbox.owner-id": str(mock.owner_id),
             "com.api-sandbox.config-version": str(mock.config_version),
-            "traefik.enable": "true",
-            f"traefik.http.routers.{router_name}.rule": (
-                f"Host(`{mock_host}`) && PathPrefix(`/{mock.id}`)"
-            ),
-            f"traefik.http.routers.{router_name}.middlewares": f"{router_name}-strip",
-            f"traefik.http.middlewares.{router_name}-strip.stripprefix.prefixes": f"/{mock.id}",
-            f"traefik.http.services.{router_name}.loadbalancer.server.port": str(
-                settings.mock_runtime_port
-            ),
-            "traefik.docker.network": settings.mock_network_name,
         }
 
     @staticmethod
