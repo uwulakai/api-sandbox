@@ -61,6 +61,8 @@ services:
         condition: service_healthy
       db_init:
         condition: service_completed_successfully
+      mock_runtime_image:
+        condition: service_completed_successfully
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
@@ -91,7 +93,9 @@ services:
     build:
       context: ./mock_runtime
     image: ${MOCK_RUNTIME_IMAGE:-api-sandbox/mock-runtime:dev}
-    profiles: ["build"]
+    pull_policy: build
+    command: ["true"]
+    restart: "no"
 
 volumes:
   postgres_data:

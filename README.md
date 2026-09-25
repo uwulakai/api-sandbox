@@ -25,7 +25,7 @@ docker network create api-sandbox-public
 3. Собрать фиксированный runtime-образ:
 
 ```powershell
-docker compose --profile build build mock_runtime_image
+docker compose build mock_runtime_image
 ```
 
 4. Запустить control plane:
