@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     app_name: str = "api-sandbox"
     app_version: str = "0.1.0"
     debug: bool = False
+    log_level: str = "INFO"
 
     database_url: str = "sqlite+aiosqlite:///./api_sandbox.db"
     session_lifetime_days: int = Field(default=30, ge=1, le=3650)

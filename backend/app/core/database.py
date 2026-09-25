@@ -1,9 +1,13 @@
 from collections.abc import AsyncIterator
+import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlmodel import SQLModel
 
 from app.config import settings
+
+
+logger = logging.getLogger("api_sandbox.database")
 
 
 engine = create_async_engine(settings.database_url, echo=settings.debug)
@@ -19,6 +23,7 @@ async def get_session() -> AsyncIterator[AsyncSession]:
         try:
             yield session
         except Exception:
+            logger.exception("Database session failed; rolling back transaction")
             await session.rollback()
             raise
 
@@ -28,5 +33,11 @@ async def initialize_database() -> None:
     # a versioned Alembic migration before production deployment.
     from app.entities.models import Mock, MockEndpoint, Session, User  # noqa: F401
 
-    async with engine.begin() as connection:
-        await connection.run_sync(SQLModel.metadata.create_all)
+    logger.info("Database initialization started")
+    try:
+        async with engine.begin() as connection:
+            await connection.run_sync(SQLModel.metadata.create_all)
+    except Exception:
+        logger.exception("Database initialization failed")
+        raise
+    logger.info("Database initialization completed")
