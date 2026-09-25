@@ -1,0 +1,86 @@
+services:
+  postgres:
+    image: postgres:${POSTGRES_VERSION:-16-alpine}
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB_NAME:-api_sandbox}
+      POSTGRES_USER: ${POSTGRES_USER:-api_sandbox}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-api_sandbox}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-api_sandbox} -d ${POSTGRES_DB_NAME:-api_sandbox}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ./backend
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-api_sandbox}:${POSTGRES_PASSWORD:-api_sandbox}@postgres:5432/${POSTGRES_DB_NAME:-api_sandbox}
+      MOCK_RUNTIME_IMAGE: ${MOCK_RUNTIME_IMAGE:-api-sandbox/mock-runtime:dev}
+      MOCK_NETWORK_NAME: ${MOCK_NETWORK_NAME:-api-sandbox-mocks}
+      MOCK_PUBLIC_BASE_URL: ${MOCK_PUBLIC_BASE_URL:-http://localhost:8080}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - app_network
+    expose:
+      - "8000"
+    restart: unless-stopped
+
+  runtime_worker:
+    build:
+      context: ./backend
+    command: ["python", "-m", "app.runtime.worker"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-api_sandbox}:${POSTGRES_PASSWORD:-api_sandbox}@postgres:5432/${POSTGRES_DB_NAME:-api_sandbox}
+      MOCK_RUNTIME_IMAGE: ${MOCK_RUNTIME_IMAGE:-api-sandbox/mock-runtime:dev}
+      MOCK_NETWORK_NAME: ${MOCK_NETWORK_NAME:-api-sandbox-mocks}
+      MOCK_PUBLIC_BASE_URL: ${MOCK_PUBLIC_BASE_URL:-http://localhost:8080}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - app_network
+      - mocks_network
+    restart: unless-stopped
+
+  mock_gateway:
+    image: traefik:${TRAEFIK_VERSION:-v3.6.7}
+    command:
+      - --providers.docker=true
+      - --providers.docker.endpoint=unix:///var/run/docker.sock
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:8080
+      - --api.dashboard=false
+      - --log.level=${TRAEFIK_LOG_LEVEL:-INFO}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - mocks_network
+      - public_network
+    expose:
+      - "8080"
+    restart: unless-stopped
+
+  mock_runtime_image:
+    build:
+      context: ./mock_runtime
+    image: ${MOCK_RUNTIME_IMAGE:-api-sandbox/mock-runtime:dev}
+    profiles: ["build"]
+
+volumes:
+  postgres_data:
+
+networks:
+  app_network:
+  mocks_network:
+    name: ${MOCK_NETWORK_NAME:-api-sandbox-mocks}
+  public_network:
+    name: ${PUBLIC_NETWORK_NAME:-api-sandbox-public}

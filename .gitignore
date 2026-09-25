@@ -107,6 +107,7 @@ ipython_config.py
 #   https://python-poetry.org/docs/basic-usage/#commit-your-poetrylock-file-to-version-control
 # poetry.lock
 # poetry.toml
+!backend/poetry.lock
 
 # pdm
 #   Similar to Pipfile.lock, it is generally recommended to include pdm.lock in version control.
@@ -156,6 +157,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+*.db
 
 # Spyder project settings
 .spyderproject
