@@ -59,16 +59,34 @@ class DockerRuntimeManager:
         except docker.errors.NotFound:
             return None
 
+    def list_managed(self) -> list[Container]:
+        return self.client.containers.list(
+            all=True,
+            filters={"label": "com.api-sandbox.managed=true"},
+        )
+
+    def remove_container(self, container: Container) -> None:
+        try:
+            container.reload()
+        except docker.errors.NotFound:
+            return
+
+        logger.info("Removing managed mock container: container_id=%s", container.id)
+        try:
+            container.stop(timeout=10)
+        except docker.errors.APIError:
+            logger.warning("Container stop failed; forcing removal: container_id=%s", container.id)
+        try:
+            container.remove(force=True)
+        except docker.errors.NotFound:
+            pass
+
     def stop_and_remove(self, mock: Mock) -> None:
         container = self.find(mock)
         if container is None:
             return
         logger.info("Removing existing mock container: mock_id=%s container_id=%s", mock.id, container.id)
-        try:
-            container.stop(timeout=10)
-        except docker.errors.APIError:
-            pass
-        container.remove(force=True)
+        self.remove_container(container)
 
     def create(self, mock: Mock, endpoints: list[MockEndpoint]) -> Container:
         logger.info(

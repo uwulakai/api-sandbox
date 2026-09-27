@@ -48,6 +48,9 @@
 - [x] Keep the Docker socket unavailable to the public API container.
 - [x] Reconcile desired Mock state with the actual Docker state.
 - [x] Make container creation, restart and deletion idempotent.
+- [x] Reconcile active Mock servers when the Docker Compose stack starts.
+- [x] Stop and remove managed Mock containers during graceful runtime-worker shutdown.
+- [x] Remove orphaned managed Mock containers during startup reconciliation.
 - [ ] Clean up orphaned containers created by the platform.
 - [ ] Add resource limits and a fixed security profile for runtime containers.
 

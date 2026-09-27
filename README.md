@@ -38,6 +38,8 @@ docker compose up --build -d postgres api runtime_worker mock_gateway
 
 Внешний Traefik/Dokploy используется только для TLS и передачи запроса в `mock_gateway`. Mock-контейнеры не содержат Traefik labels и не предоставляют gateway доступ к Docker socket.
 
+`runtime_worker` владеет lifecycle Mock-контейнеров. При запуске Compose он сначала удаляет старые managed-контейнеры и поднимает Mock-серверы с `desired_status=running`. При штатной остановке Compose worker обрабатывает `SIGTERM`, удаляет managed-контейнеры, а следующий запуск Compose восстанавливает активные Mock-серверы. Рестарт только `api` Mock-контейнеры не затрагивает.
+
 ## API
 
 - Swagger: `/docs`

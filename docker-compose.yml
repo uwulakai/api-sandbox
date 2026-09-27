@@ -68,6 +68,7 @@ services:
     networks:
       - app_network
       - mocks_network
+    stop_grace_period: 90s
     restart: unless-stopped
 
   mock_gateway:
