@@ -6,7 +6,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-RUN pip install --no-cache-dir poetry
+RUN pip install --no-cache-dir --retries 10 --timeout 120 poetry
 
 COPY pyproject.toml /app/
 RUN poetry install --no-root --only main --no-interaction --no-ansi
