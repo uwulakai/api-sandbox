@@ -92,8 +92,35 @@ services:
     command: ["true"]
     restart: "no"
 
+
+  autotests:
+    build:
+      context: .
+      dockerfile: automation/Dockerfile
+    environment:
+      JAVA_OPTS: -Djenkins.install.runSetupWizard=false -Duser.timezone=UTC
+      TZ: UTC
+      JENKINS_ADMIN_USER: ${JENKINS_ADMIN_USER:-admin}
+      JENKINS_ADMIN_PASSWORD: ${JENKINS_ADMIN_PASSWORD:?Set a Jenkins administrator password}
+      API_BASE_URL: ${API_BASE_URL:-https://api.api-sandbox.merlant.xyz}
+      E2E_WAIT_SECONDS: ${E2E_WAIT_SECONDS:-90}
+      E2E_CRON: ${E2E_CRON:-}
+    volumes:
+      - jenkins_data:/var/jenkins_home
+    expose:
+      - "8080"
+    restart: unless-stopped
+    stop_grace_period: 3m
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8080/login"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 120s
+
 volumes:
   postgres_data:
+  jenkins_data:
 
 networks:
   app_network:

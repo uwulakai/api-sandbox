@@ -1,0 +1,11 @@
+**
+!automation/
+!automation/**
+!e2e/
+!e2e/requirements.txt
+!e2e/pytest.ini
+!e2e/run.py
+!e2e/tests/
+!e2e/tests/**
+**/__pycache__/
+**/.env

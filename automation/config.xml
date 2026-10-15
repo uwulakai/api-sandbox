@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hudson>
+  <!-- Secure even if a plugin/init hook fails before the admin is provisioned. -->
+  <numExecutors>1</numExecutors>
+  <useSecurity>true</useSecurity>
+  <authorizationStrategy class="hudson.security.FullControlOnceLoggedInAuthorizationStrategy">
+    <denyAnonymousReadAccess>true</denyAnonymousReadAccess>
+  </authorizationStrategy>
+  <securityRealm class="hudson.security.HudsonPrivateSecurityRealm">
+    <disableSignup>true</disableSignup>
+    <enableCaptcha>false</enableCaptcha>
+  </securityRealm>
+  <slaveAgentPort>-1</slaveAgentPort>
+  <crumbIssuer class="hudson.security.csrf.DefaultCrumbIssuer"/>
+</hudson>

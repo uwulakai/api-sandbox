@@ -8,6 +8,7 @@
 - `backend/runtime_worker` — синхронизация состояния Mock-серверов с Docker.
 - `mock_runtime` — фиксированный runtime-образ одной API-заглушки.
 - `mock_gateway` — внутренний HTTP gateway для маршрутизации запросов к Mock-контейнерам по Docker DNS.
+- `autotests` — Jenkins и встроенный pytest-набор для проверки уже запущенного API.
 - PostgreSQL — пользователи, сессии, Mock-серверы и endpoints.
 
 Пользователь управляет только декларативным контрактом API. Docker image, command, network, volumes и лимиты ресурсов задаются платформой.
@@ -31,7 +32,7 @@ docker compose build mock_runtime_image
 4. Запустить control plane:
 
 ```powershell
-docker compose up --build -d postgres api runtime_worker mock_gateway
+docker compose up --build -d postgres api runtime_worker mock_gateway autotests
 ```
 
 В Dokploy `public_network` должна быть подключена к сети, в которой работает внешний Traefik. Домен `mock-server.api-sandbox.merlant.xyz` направляется на `mock_gateway:8080`.
@@ -53,6 +54,12 @@ docker compose up --build -d postgres api runtime_worker mock_gateway
 ```text
 https://mock-server.api-sandbox.merlant.xyz/{mock_id}/{path}
 ```
+
+## Автотесты запущенного приложения
+
+- [HTTP E2E: запуск, покрытие и отчёты](e2e/README.md).
+- [Jenkins: общий Compose для Dokploy, UI и расписание](automation/README.md).
+- [Результаты первого live-прогона](e2e/RESULTS-2026-09-27.md).
 
 ## Status
 

@@ -1,0 +1,31 @@
+node {
+    timestamps {
+        // Fixed suite from this image; rebuild the service to update tests.
+        // No SCM credentials or production Docker access are needed.
+        withEnv([
+            "API_BASE_URL=${params.API_BASE_URL}",
+            "E2E_WAIT_SECONDS=${params.E2E_WAIT_SECONDS}",
+            'JENKINS_ADMIN_PASSWORD=',
+            "E2E_REPORT_DIR=${env.WORKSPACE}/reports/${env.BUILD_NUMBER}"
+        ]) {
+            try {
+                timeout(time: 30, unit: 'MINUTES') {
+                    stage('HTTP scenarios') {
+                        if (params.SUITE == 'smoke') {
+                            sh 'python /opt/e2e/run.py -k "health or authentication_required"'
+                        } else {
+                            sh 'python /opt/e2e/run.py'
+                        }
+                    }
+                }
+            } finally {
+                stage('Results') {
+                    junit testResults: "reports/${env.BUILD_NUMBER}/junit.xml", allowEmptyResults: true
+                    archiveArtifacts artifacts: "reports/${env.BUILD_NUMBER}/*", allowEmptyArchive: true
+                    // Artifacts are retained with the build; avoid unbounded workspace growth.
+                    dir("reports/${env.BUILD_NUMBER}") { deleteDir() }
+                }
+            }
+        }
+    }
+}
