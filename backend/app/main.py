@@ -19,7 +19,16 @@ logger = logging.getLogger("api_sandbox.api")
 
 def configure_logging() -> None:
     level = getattr(logging, settings.log_level.upper(), logging.INFO)
-    logging.getLogger("api_sandbox").setLevel(level)
+    app_logger = logging.getLogger("api_sandbox")
+    app_logger.setLevel(level)
+    app_logger.propagate = False
+    if not app_logger.handlers:
+        handler = logging.StreamHandler()
+        handler.setLevel(level)
+        handler.setFormatter(
+            logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s")
+        )
+        app_logger.addHandler(handler)
 
 
 @asynccontextmanager

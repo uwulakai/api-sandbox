@@ -35,7 +35,7 @@ docker compose build mock_runtime_image
 docker compose up --build -d postgres api runtime_worker mock_gateway autotests
 ```
 
-В Dokploy `public_network` должна быть подключена к сети, в которой работает внешний Traefik. Домен `mock-server.api-sandbox.merlant.xyz` направляется на `mock_gateway:8080`.
+В Dokploy сети `api-sandbox-mocks` и `api-sandbox-public` должны существовать заранее: `api-sandbox-mocks` используется как external-сеть для динамических Mock-контейнеров, а `public_network` должна быть подключена к сети, в которой работает внешний Traefik. Домен `mock-server.api-sandbox.merlant.xyz` направляется на `mock_gateway:8080`.
 
 Внешний Traefik/Dokploy используется только для TLS и передачи запроса в `mock_gateway`. Mock-контейнеры не содержат Traefik labels и не предоставляют gateway доступ к Docker socket.
 

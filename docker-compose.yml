@@ -125,6 +125,8 @@ volumes:
 networks:
   app_network:
   mocks_network:
+    # Shared with dynamically created mock containers managed by runtime_worker.
     name: ${MOCK_NETWORK_NAME:-api-sandbox-mocks}
+    external: true
   public_network:
     name: ${PUBLIC_NETWORK_NAME:-api-sandbox-public}
