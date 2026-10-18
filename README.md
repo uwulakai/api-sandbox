@@ -35,7 +35,15 @@ docker compose build mock_runtime_image
 docker compose up --build -d postgres api runtime_worker mock_gateway autotests
 ```
 
-В Dokploy сети `api-sandbox-mocks` и `api-sandbox-public` должны существовать заранее: `api-sandbox-mocks` используется как external-сеть для динамических Mock-контейнеров, а `public_network` должна быть подключена к сети, в которой работает внешний Traefik. Домен `mock-server.api-sandbox.merlant.xyz` направляется на `mock_gateway:8080`.
+В Dokploy сеть `api-sandbox-mocks` должна существовать заранее: это external-сеть для динамических Mock-контейнеров. Dokploy подключает сервисы с доменами к сети внешнего Traefik; в режиме Isolated Deployments это отдельная сеть проекта. Домен `mock-server.api-sandbox.merlant.xyz` направляется на `mock_gateway:8080`.
+
+Для `api`, `mock_gateway` и `autotests` явно задан label `traefik.docker.network`. Переменная `TRAEFIK_DOCKER_NETWORK` должна содержать точное имя общей сети этих сервисов и Traefik: `dokploy-network` при стандартном размещении либо имя сети проекта при Isolated Deployments. Например, для текущего изолированного стенда в Environment Dokploy:
+
+```dotenv
+TRAEFIK_DOCKER_NETWORK=apisandbox-monolite-uw4fku
+```
+
+После изменения нужен redeploy Compose. В Preview Compose должны сохраниться этот label и подключение к указанной сети. Если Traefik настроен на отсутствующую у сервиса сеть, он выбирает другую доступную сеть; при нескольких сетях очередное Docker-событие может изменить выбранный IP и привести к gateway timeout. Сеть `api-sandbox-mocks` выбирать для внешнего Traefik не нужно.
 
 Внешний Traefik/Dokploy используется только для TLS и передачи запроса в `mock_gateway`. Mock-контейнеры не содержат Traefik labels и не предоставляют gateway доступ к Docker socket.
 

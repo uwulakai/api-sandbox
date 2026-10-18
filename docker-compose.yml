@@ -45,6 +45,8 @@ services:
       - app_network
     expose:
       - "8000"
+    labels:
+      traefik.docker.network: ${TRAEFIK_DOCKER_NETWORK:-dokploy-network}
     restart: unless-stopped
 
   runtime_worker:
@@ -82,6 +84,8 @@ services:
       - public_network
     expose:
       - "8080"
+    labels:
+      traefik.docker.network: ${TRAEFIK_DOCKER_NETWORK:-dokploy-network}
     restart: unless-stopped
 
   mock_runtime_image:
@@ -109,6 +113,8 @@ services:
       - jenkins_data:/var/jenkins_home
     expose:
       - "8080"
+    labels:
+      traefik.docker.network: ${TRAEFIK_DOCKER_NETWORK:-dokploy-network}
     restart: unless-stopped
     stop_grace_period: 3m
     healthcheck:

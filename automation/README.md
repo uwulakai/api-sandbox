@@ -19,6 +19,12 @@ Jenkins запускается сервисом `autotests` в том же ко�
    E2E_CRON=
    ```
 
+   При включённом Isolated Deployments также задать `TRAEFIK_DOCKER_NETWORK`
+   равной точному имени изолированной сети проекта из Preview Compose
+   (для текущего стенда — `apisandbox-monolite-uw4fku`). Этот выбор применяется
+   к API, mock gateway и Jenkins, чтобы события запуска/удаления mock-контейнеров
+   не меняли сеть, через которую Traefik подключается к публичным сервисам.
+
 3. Выполнить Deploy/redeploy основного Compose. Первичная сборка скачает Jenkins,
    плагины и Python-зависимости.
 4. Создать DNS для Jenkins-домена, например `tests.api-sandbox.merlant.xyz`.
