@@ -8,7 +8,7 @@ WORKDIR /app
 
 RUN pip install --no-cache-dir --retries 10 --timeout 120 poetry
 
-COPY pyproject.toml /app/
+COPY pyproject.toml poetry.lock /app/
 RUN poetry install --no-root --only main --no-interaction --no-ansi
 
 COPY app /app/app
