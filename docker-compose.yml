@@ -45,6 +45,8 @@ services:
       - app_network
     expose:
       - "8000"
+    ports:
+      - "${API_HTTP_PORT:-8890}:8000"
     labels:
       traefik.docker.network: ${TRAEFIK_DOCKER_NETWORK:-dokploy-network}
     restart: unless-stopped
@@ -113,6 +115,8 @@ services:
       - jenkins_data:/var/jenkins_home
     expose:
       - "8080"
+    ports:
+      - "${JENKINS_HTTP_PORT:-8891}:8080"
     labels:
       traefik.docker.network: ${TRAEFIK_DOCKER_NETWORK:-dokploy-network}
     restart: unless-stopped

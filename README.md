@@ -49,6 +49,25 @@ TRAEFIK_DOCKER_NETWORK=apisandbox-monolite-uw4fku
 
 `runtime_worker` владеет lifecycle Mock-контейнеров. При запуске Compose он сначала удаляет старые managed-контейнеры и поднимает Mock-серверы с `desired_status=running`. При штатной остановке Compose worker обрабатывает `SIGTERM`, удаляет managed-контейнеры, а следующий запуск Compose восстанавливает активные Mock-серверы. Рестарт только `api` Mock-контейнеры не затрагивает.
 
+## Прямой HTTP-доступ
+
+Compose публикует API на порту `8890` сервера, Jenkins — на `8891`. После redeploy
+они доступны напрямую, в обход Traefik и Let's Encrypt:
+
+- Swagger: `http://SERVER_IP:8890/docs`.
+- API health: `http://SERVER_IP:8890/health`.
+- Jenkins: `http://SERVER_IP:8891`.
+
+`SERVER_IP` — публичный IP сервера Dokploy. Порты можно изменить через
+`API_HTTP_PORT` и `JENKINS_HTTP_PORT`. Если на сервере или у провайдера настроен
+firewall, разрешите входящие TCP-соединения на выбранные порты.
+
+Для автотестов через этот адрес задайте в Environment Dokploy
+`API_BASE_URL=http://SERVER_IP:8890` и выполните redeploy либо укажите этот URL
+в параметрах сборки Jenkins. В Jenkins задайте **Manage Jenkins → System → Jenkins URL**
+равным `http://SERVER_IP:8891`, чтобы ссылки использовали доступный адрес.
+Для полного E2E-прогона также необходим доступ к адресам `public_url` Mock-серверов.
+
 ## API
 
 - Swagger: `/docs`
