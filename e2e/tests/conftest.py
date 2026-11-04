@@ -117,6 +117,14 @@ class LiveAPI:
         last = None
         while time.monotonic() < deadline:
             response = self.request(method, mock["public_url"] + path)
+            if response.headers.get("X-Request-ID") != response.request.headers["X-Request-ID"]:
+                pytest.fail(
+                    f"Public mock {mock['id']} returned HTTP {response.status_code} without "
+                    "the gateway's matching X-Request-ID. Check MOCK_PUBLIC_BASE_URL and "
+                    "the Dokploy route to mock_gateway; an unrelated proxy 404 must not "
+                    "count as a deleted runtime.",
+                    pytrace=False,
+                )
             last = response.status_code
             if last == status:
                 if body is None:

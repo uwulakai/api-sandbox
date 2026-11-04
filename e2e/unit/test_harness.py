@@ -98,13 +98,56 @@ def test_unknown_registration_is_recorded(client):
 def test_readiness_waits_for_new_response(client, monkeypatch):
     replies = iter([httpx.Response(404), httpx.Response(200, json={"v": 1}),
                     httpx.Response(200, json={"v": 2})])
-    client.client = httpx.Client(transport=httpx.MockTransport(lambda request: next(replies)))
+
+    def handler(request):
+        response = next(replies)
+        response.headers["X-Request-ID"] = request.headers["X-Request-ID"]
+        return response
+
+    client.client = httpx.Client(transport=httpx.MockTransport(handler))
     monkeypatch.setattr(support.time, "sleep", lambda seconds: None)
     mock = {"id": "test", "public_url": "https://mocks.example.test/test"}
     assert client.wait_public(mock, body={"v": 2}).json() == {"v": 2}
 
 
-def test_cleanup_recovers_timed_out_creation_without_touching_other_mocks(client):
+@pytest.mark.parametrize("expected", [200, 404])
+def test_public_route_rejects_unrelated_proxy_404(client, expected):
+    calls = []
+
+    def handler(request):
+        calls.append(request)
+        return httpx.Response(404, text="404 page not found\n")
+
+    client.client = httpx.Client(transport=httpx.MockTransport(handler))
+    mock = {"id": "test", "public_url": "https://wrong-domain.example.test/test"}
+    with pytest.raises(pytest.fail.Exception, match="MOCK_PUBLIC_BASE_URL"):
+        client.wait_public(mock, status=expected)
+    assert len(calls) == 1
+
+
+def test_public_route_rejects_stale_request_id(client):
+    client.client = httpx.Client(transport=httpx.MockTransport(
+        lambda request: httpx.Response(404, headers={"X-Request-ID": "stale-request"})
+    ))
+    mock = {"id": "test", "public_url": "https://mocks.example.test/test"}
+    with pytest.raises(pytest.fail.Exception, match="matching X-Request-ID"):
+        client.wait_public(mock, status=404)
+
+
+def test_public_route_accepts_gateway_404(client):
+    client.client = httpx.Client(transport=httpx.MockTransport(
+        lambda request: httpx.Response(
+            404,
+            json={"detail": "Mock server not found or not running"},
+            headers={"X-Request-ID": request.headers["X-Request-ID"]},
+        )
+    ))
+    mock = {"id": "test", "public_url": "https://mocks.example.test/test"}
+    assert client.wait_public(mock, path="/_internal/health", status=404).status_code == 404
+
+
+@pytest.mark.parametrize("gateway_available", [True, False])
+def test_cleanup_recovers_timed_out_creation_without_touching_other_mocks(client, gateway_available):
     calls = []
 
     def handler(request):
@@ -120,15 +163,22 @@ def test_cleanup_recovers_timed_out_creation_without_touching_other_mocks(client
         if request.method == "DELETE":
             assert request.url.path == "/api/v1/mocks/owned"
             return httpx.Response(204)
-        return httpx.Response(404)
+        headers = {"X-Request-ID": request.headers["X-Request-ID"]} if gateway_available else {}
+        return httpx.Response(404, headers=headers)
 
     client.client = httpx.Client(transport=httpx.MockTransport(handler))
     fixture = support.mocks.__wrapped__(client, {"email": "test@example.com", "token": "private-token"})
     create = next(fixture)
     with pytest.raises(pytest.fail.Exception, match="ReadTimeout"):
         create()
-    with pytest.raises(StopIteration):
-        next(fixture)
-    assert client.resources[0]["cleanup"] == "api_deleted_and_runtime_unreachable"
+    if gateway_available:
+        with pytest.raises(StopIteration):
+            next(fixture)
+        assert client.resources[0]["cleanup"] == "api_deleted_and_runtime_unreachable"
+    else:
+        with pytest.raises(pytest.fail.Exception, match="Mock cleanup failed.*MOCK_PUBLIC_BASE_URL"):
+            next(fixture)
+        assert client.resources[0]["cleanup"] == "failed"
+        assert client.resources[0]["api_deleted"] is True
     assert client.resources[0]["id"] == "owned"
     assert [call for call in calls if call[0] == "POST"] == [("POST", "/api/v1/mocks")]

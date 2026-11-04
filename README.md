@@ -51,15 +51,17 @@ TRAEFIK_DOCKER_NETWORK=apisandbox-monolite-uw4fku
 
 ## Прямой HTTP-доступ
 
-Compose публикует API на порту `8890` сервера, Jenkins — на `8891`. После redeploy
+Compose публикует API на порту `8890` сервера, Jenkins — на `8891`, mock gateway — на `8892`. После redeploy
 они доступны напрямую, в обход Traefik и Let's Encrypt:
 
 - Swagger: `http://SERVER_IP:8890/docs`.
 - API health: `http://SERVER_IP:8890/health`.
 - Jenkins: `http://SERVER_IP:8891`.
+- Mock gateway health: `http://SERVER_IP:8892/health`.
+- Mock endpoint: `http://SERVER_IP:8892/{mock-id}/{path}`.
 
 `SERVER_IP` — публичный IP сервера Dokploy. Порты можно изменить через
-`API_HTTP_PORT` и `JENKINS_HTTP_PORT`. Если на сервере или у провайдера настроен
+`API_HTTP_PORT`, `JENKINS_HTTP_PORT` и `MOCK_GATEWAY_HTTP_PORT`. Если на сервере или у провайдера настроен
 firewall, разрешите входящие TCP-соединения на выбранные порты.
 
 Для автотестов через этот адрес задайте в Environment Dokploy
@@ -67,6 +69,20 @@ firewall, разрешите входящие TCP-соединения на вы
 в параметрах сборки Jenkins. В Jenkins задайте **Manage Jenkins → System → Jenkins URL**
 равным `http://SERVER_IP:8891`, чтобы ссылки использовали доступный адрес.
 Для полного E2E-прогона также необходим доступ к адресам `public_url` Mock-серверов.
+
+Для текущего стенда без TLS задайте в Environment Dokploy перед redeploy:
+
+```dotenv
+API_BASE_URL=http://95.181.213.57:8890
+MOCK_PUBLIC_BASE_URL=http://95.181.213.57:8892
+```
+
+`MOCK_PUBLIC_BASE_URL` — внешний адрес gateway, который API возвращает в `public_url`
+каждого мока. Dokploy не синхронизирует эту переменную при изменении домена.
+Сохранённое в Environment значение имеет приоритет над значением по умолчанию
+в Compose; после смены адреса нужно обновить Environment и выполнить redeploy.
+Полный E2E-набор проверяет совпадение `X-Request-ID` в ответах gateway, поэтому
+`404` от постороннего маршрута больше не считается подтверждением удаления runtime.
 
 ## API
 
@@ -87,6 +103,7 @@ https://mock-server.api-sandbox.merlant.xyz/{mock_id}/{path}
 - [HTTP E2E: запуск, покрытие и отчёты](e2e/README.md).
 - [Jenkins: общий Compose для Dokploy, UI и расписание](automation/README.md).
 - [Результаты первого live-прогона](e2e/RESULTS-2026-09-27.md).
+- [Диагностика публичного gateway и серверный E2E-прогон 2026-11-04](e2e/RESULTS-2026-11-04.md).
 
 ## Status
 
