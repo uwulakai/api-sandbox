@@ -48,7 +48,8 @@ services:
     ports:
       - "${API_HTTP_PORT:-8890}:8000"
     labels:
-      traefik.docker.network: ${TRAEFIK_DOCKER_NETWORK:-dokploy-network}
+      # Dokploy 0.29.x appends domain labels only to the list form.
+      - "traefik.docker.network=${TRAEFIK_DOCKER_NETWORK:-dokploy-network}"
     restart: unless-stopped
 
   runtime_worker:
@@ -89,7 +90,7 @@ services:
     ports:
       - "${MOCK_GATEWAY_HTTP_PORT:-8892}:8080"
     labels:
-      traefik.docker.network: ${TRAEFIK_DOCKER_NETWORK:-dokploy-network}
+      - "traefik.docker.network=${TRAEFIK_DOCKER_NETWORK:-dokploy-network}"
     restart: unless-stopped
 
   mock_runtime_image:
@@ -120,7 +121,7 @@ services:
     ports:
       - "${JENKINS_HTTP_PORT:-8891}:8080"
     labels:
-      traefik.docker.network: ${TRAEFIK_DOCKER_NETWORK:-dokploy-network}
+      - "traefik.docker.network=${TRAEFIK_DOCKER_NETWORK:-dokploy-network}"
     restart: unless-stopped
     stop_grace_period: 3m
     healthcheck:
