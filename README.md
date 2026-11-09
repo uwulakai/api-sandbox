@@ -17,28 +17,17 @@
 ## Локальный запуск
 
 1. Скопировать `.env.example` в `.env` и при необходимости изменить настройки.
-2. Создать сети для локального запуска:
-
-```powershell
-docker network create api-sandbox-mocks
-docker network create api-sandbox-public
-```
-
-3. Собрать фиксированный runtime-образ:
-
-```powershell
-docker compose build mock_runtime_image
-```
-
-4. Запустить приложение:
+2. Собрать и запустить приложение:
 
 ```powershell
 docker compose up --build -d
 ```
 
-5. Открыть `http://localhost:8893`. Порт на компьютере можно поменять через `FRONTEND_HTTP_PORT`.
+3. Открыть `http://localhost:8893`. Порт на компьютере можно поменять через `FRONTEND_HTTP_PORT`.
 
-В Dokploy сеть `api-sandbox-mocks` должна существовать заранее: это external-сеть для динамических Mock-контейнеров. Dokploy подключает сервисы с доменами к сети внешнего Traefik; в режиме Isolated Deployments это отдельная сеть проекта. Домен `mock-server.api-sandbox.merlant.xyz` направляется на `mock_gateway:8080`.
+Compose создаёт bridge-сеть `<имя проекта>_mocks_network`. В ней работают `mock_gateway`, `runtime_worker` и динамически создаваемые Mock-контейнеры. Ручное создание сети при запуске не требуется.
+
+Dokploy подключает сервисы с доменами к сети Traefik. В режиме Isolated Deployments это отдельная сеть проекта.
 
 Для `api`, `mock_gateway`, `frontend` и `autotests` явно задан label `traefik.docker.network`. Переменная `TRAEFIK_DOCKER_NETWORK` должна содержать точное имя общей сети этих сервисов и Traefik: `dokploy-network` при стандартном размещении либо имя сети проекта при Isolated Deployments. Например, для текущего изолированного стенда в Environment Dokploy:
 
@@ -46,9 +35,9 @@ docker compose up --build -d
 TRAEFIK_DOCKER_NETWORK=apisandbox-monolite-uw4fku
 ```
 
-После изменения нужен redeploy Compose. В Preview Compose должны сохраниться этот label и подключение к указанной сети. Если Traefik настроен на отсутствующую у сервиса сеть, он выбирает другую доступную сеть; при нескольких сетях очередное Docker-событие может изменить выбранный IP и привести к gateway timeout. Сеть `api-sandbox-mocks` выбирать для внешнего Traefik не нужно.
+После изменения нужен redeploy Compose. В Preview Compose должны сохраниться этот label и подключение к указанной сети. Если Traefik настроен на отсутствующую у сервиса сеть, он выбирает другую доступную сеть; при нескольких сетях очередное Docker-событие может изменить выбранный IP и привести к gateway timeout.
 
-Внешний Traefik/Dokploy используется только для TLS и передачи запроса в `mock_gateway`. Mock-контейнеры не содержат Traefik labels и не предоставляют gateway доступ к Docker socket.
+Traefik/Dokploy завершает TLS и направляет запросы к сервисам Compose. Mock-контейнеры не содержат Traefik labels и не предоставляют gateway доступ к Docker socket.
 
 `runtime_worker` владеет lifecycle Mock-контейнеров. При запуске Compose он сначала удаляет старые managed-контейнеры и поднимает Mock-серверы с `desired_status=running`. При штатной остановке Compose worker обрабатывает `SIGTERM`, удаляет managed-контейнеры, а следующий запуск Compose восстанавливает активные Mock-серверы. Рестарт только `api` Mock-контейнеры не затрагивает.
 
@@ -58,47 +47,39 @@ TRAEFIK_DOCKER_NETWORK=apisandbox-monolite-uw4fku
 
 Для публикации через Dokploy добавьте домен для сервиса `frontend` с контейнерным портом `8080`, включите HTTPS и разверните Compose. Фронтенд обращается к `api` и `mock_gateway` по именам сервисов. Отдельные публичные адреса API и настройки CORS для интерфейса не требуются.
 
-Для разработки с обновлением страницы при изменениях запустите API и gateway, затем из каталога `frontend` (Node.js 24+):
+Для разработки с обновлением страницы при изменениях запустите Compose, затем из каталога `frontend` (Node.js 24+):
 
 ```powershell
 npm ci
 npm run dev
 ```
 
-Vite выводит адрес приложения. По умолчанию прокси использует локальные порты `8890` и `8892`. Если сервисы запущены на других адресах, задайте `API_UPSTREAM` и `MOCK_GATEWAY_UPSTREAM` в окружении перед запуском. Команда `npm run build` проверяет типы и собирает production-версию.
+Vite выводит адрес приложения и передаёт запросы API и пробные запросы контейнеру `frontend` через `127.0.0.1:8893`. Если локальный порт изменён в Compose, задайте то же значение `FRONTEND_HTTP_PORT` в окружении перед запуском Vite. Команда `npm run build` проверяет типы и собирает production-версию.
 
-## Прямой HTTP-доступ
+## Доступ через HTTPS в Dokploy
 
-Compose публикует API на порту `8890` сервера, Jenkins — на `8891`, mock gateway — на `8892`. После redeploy
-они доступны напрямую, в обход Traefik и Let's Encrypt:
+Назначьте домены в Dokploy, включив HTTPS и Let's Encrypt. В настройках домена укажите порт внутри контейнера.
 
-- Swagger: `http://SERVER_IP:8890/docs`.
-- API health: `http://SERVER_IP:8890/health`.
-- Jenkins: `http://SERVER_IP:8891`.
-- Mock gateway health: `http://SERVER_IP:8892/health`.
-- Mock endpoint: `http://SERVER_IP:8892/{mock-id}/{path}`.
+| Домен | Сервис | Порт контейнера |
+| --- | --- | --- |
+| `api.apisandbox.mnrg.tech` | `api` | `8000` |
+| `mockserver.apisandbox.mnrg.tech` | `mock_gateway` | `8080` |
+| `tests.apisandbox.mnrg.tech` | `autotests` | `8080` |
+| Домен фронтенда | `frontend` | `8080` |
 
-`SERVER_IP` — публичный IP сервера Dokploy. Порты можно изменить через
-`API_HTTP_PORT`, `JENKINS_HTTP_PORT` и `MOCK_GATEWAY_HTTP_PORT`. Если на сервере или у провайдера настроен
-firewall, разрешите входящие TCP-соединения на выбранные порты.
-
-Для автотестов через этот адрес задайте в Environment Dokploy
-`API_BASE_URL=http://SERVER_IP:8890` и выполните redeploy либо укажите этот URL
-в параметрах сборки Jenkins. В Jenkins задайте **Manage Jenkins → System → Jenkins URL**
-равным `http://SERVER_IP:8891`, чтобы ссылки использовали доступный адрес.
-Для полного E2E-прогона также необходим доступ к адресам `public_url` Mock-серверов.
-
-Для текущего стенда без TLS задайте в Environment Dokploy перед redeploy:
+Перед redeploy проверьте адреса в Environment Dokploy.
 
 ```dotenv
-API_BASE_URL=http://95.181.213.57:8890
-MOCK_PUBLIC_BASE_URL=http://95.181.213.57:8892
+API_BASE_URL=https://api.apisandbox.mnrg.tech
+MOCK_PUBLIC_BASE_URL=https://mockserver.apisandbox.mnrg.tech
 ```
 
 `MOCK_PUBLIC_BASE_URL` — внешний адрес gateway, который API возвращает в `public_url`
 каждого мока. Dokploy не синхронизирует эту переменную при изменении домена.
 Сохранённое в Environment значение имеет приоритет над значением по умолчанию
 в Compose; после смены адреса нужно обновить Environment и выполнить redeploy.
+При локальном запуске значение `http://mock_gateway:8080` доступно внутри сети Compose.
+Для проверки локального мока из браузера используйте вкладку «Проверка».
 Полный E2E-набор проверяет совпадение `X-Request-ID` в ответах gateway, поэтому
 `404` от постороннего маршрута больше не считается подтверждением удаления runtime.
 
@@ -113,7 +94,7 @@ MOCK_PUBLIC_BASE_URL=http://95.181.213.57:8892
 Внешний URL Mock имеет вид:
 
 ```text
-https://mock-server.api-sandbox.merlant.xyz/{mock_id}/{path}
+https://mockserver.apisandbox.mnrg.tech/{mock_id}/{path}
 ```
 
 ## Автотесты запущенного приложения

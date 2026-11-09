@@ -1,17 +1,14 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { handleRoutes } from './server/routes.mjs';
+
+const target = `http://127.0.0.1:${process.env.FRONTEND_HTTP_PORT || '8893'}`;
 
 export default defineConfig({
-  plugins: [
-    react(),
-    {
-      name: 'api-sandbox-routes',
-      configureServer(server) {
-        server.middlewares.use((req, res, next) => {
-          if (!handleRoutes(req, res)) next();
-        });
-      },
+  plugins: [react()],
+  server: {
+    proxy: {
+      '/api/v1/': target,
+      '^/probe($|[?])': target,
     },
-  ],
+  },
 });

@@ -11,7 +11,7 @@
 ```powershell
 python -m venv e2e/.venv
 e2e/.venv/Scripts/python -m pip install -r e2e/requirements.txt
-$env:API_BASE_URL = 'https://api.api-sandbox.merlant.xyz'
+$env:API_BASE_URL = 'https://api.apisandbox.mnrg.tech'
 e2e/.venv/Scripts/python e2e/run.py
 ```
 
@@ -30,7 +30,7 @@ e2e/.venv/Scripts/python e2e/run.py -k 'health or authentication_required'
 
 ```bash
 docker build -t api-sandbox-e2e ./e2e
-docker run --rm -e API_BASE_URL=https://api.api-sandbox.merlant.xyz \
+docker run --rm -e API_BASE_URL=https://api.apisandbox.mnrg.tech \
   -v "$PWD/e2e/reports:/reports" api-sandbox-e2e
 ```
 

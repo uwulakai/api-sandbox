@@ -34,8 +34,7 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-api_sandbox}:${POSTGRES_PASSWORD:-api_sandbox}@postgres:5432/${POSTGRES_DB_NAME:-api_sandbox}
       MOCK_RUNTIME_IMAGE: ${MOCK_RUNTIME_IMAGE:-api-sandbox/mock-runtime:dev}
-      MOCK_NETWORK_NAME: ${MOCK_NETWORK_NAME:-api-sandbox-mocks}
-      MOCK_PUBLIC_BASE_URL: ${MOCK_PUBLIC_BASE_URL:-http://localhost:${MOCK_GATEWAY_HTTP_PORT:-8892}}
+      MOCK_PUBLIC_BASE_URL: ${MOCK_PUBLIC_BASE_URL:-http://mock_gateway:8080}
     depends_on:
       postgres:
         condition: service_healthy
@@ -45,8 +44,6 @@ services:
       - app_network
     expose:
       - "8000"
-    ports:
-      - "${API_HTTP_PORT:-8890}:8000"
     labels:
       # Dokploy 0.29.x appends domain labels only to the list form.
       - "traefik.docker.network=${TRAEFIK_DOCKER_NETWORK:-dokploy-network}"
@@ -59,8 +56,8 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-api_sandbox}:${POSTGRES_PASSWORD:-api_sandbox}@postgres:5432/${POSTGRES_DB_NAME:-api_sandbox}
       MOCK_RUNTIME_IMAGE: ${MOCK_RUNTIME_IMAGE:-api-sandbox/mock-runtime:dev}
-      MOCK_NETWORK_NAME: ${MOCK_NETWORK_NAME:-api-sandbox-mocks}
-      MOCK_PUBLIC_BASE_URL: ${MOCK_PUBLIC_BASE_URL:-http://localhost:${MOCK_GATEWAY_HTTP_PORT:-8892}}
+      MOCK_NETWORK_NAME: ${COMPOSE_PROJECT_NAME}_mocks_network
+      MOCK_PUBLIC_BASE_URL: ${MOCK_PUBLIC_BASE_URL:-http://mock_gateway:8080}
     depends_on:
       postgres:
         condition: service_healthy
@@ -87,8 +84,6 @@ services:
       - public_network
     expose:
       - "8080"
-    ports:
-      - "${MOCK_GATEWAY_HTTP_PORT:-8892}:8080"
     labels:
       - "traefik.docker.network=${TRAEFIK_DOCKER_NETWORK:-dokploy-network}"
     restart: unless-stopped
@@ -132,15 +127,13 @@ services:
       TZ: UTC
       JENKINS_ADMIN_USER: ${JENKINS_ADMIN_USER:-admin}
       JENKINS_ADMIN_PASSWORD: ${JENKINS_ADMIN_PASSWORD:?Set a Jenkins administrator password}
-      API_BASE_URL: ${API_BASE_URL:-https://api.api-sandbox.merlant.xyz}
+      API_BASE_URL: ${API_BASE_URL:-https://api.apisandbox.mnrg.tech}
       E2E_WAIT_SECONDS: ${E2E_WAIT_SECONDS:-90}
       E2E_CRON: ${E2E_CRON:-}
     volumes:
       - jenkins_data:/var/jenkins_home
     expose:
       - "8080"
-    ports:
-      - "${JENKINS_HTTP_PORT:-8891}:8080"
     labels:
       - "traefik.docker.network=${TRAEFIK_DOCKER_NETWORK:-dokploy-network}"
     restart: unless-stopped
@@ -159,8 +152,8 @@ volumes:
 networks:
   app_network:
   mocks_network:
-    # Shared with dynamically created mock containers managed by runtime_worker.
-    name: ${MOCK_NETWORK_NAME:-api-sandbox-mocks}
-    external: true
+    # The worker uses this name when creating mock containers on the same host.
+    name: ${COMPOSE_PROJECT_NAME}_mocks_network
+    driver: bridge
   public_network:
     name: ${PUBLIC_NETWORK_NAME:-api-sandbox-public}

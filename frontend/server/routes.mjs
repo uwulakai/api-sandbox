@@ -2,8 +2,8 @@ import { request as requestHttp } from 'node:http';
 import { request as requestHttps } from 'node:https';
 import { pipeline } from 'node:stream/promises';
 
-const api = process.env.API_UPSTREAM || 'http://localhost:8890';
-const gateway = process.env.MOCK_GATEWAY_UPSTREAM || 'http://localhost:8892';
+const api = process.env.API_UPSTREAM || 'http://api:8000';
+const gateway = process.env.MOCK_GATEWAY_UPSTREAM || 'http://mock_gateway:8080';
 const methods = new Set(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']);
 const maxBytes = 1024 * 1024;
 

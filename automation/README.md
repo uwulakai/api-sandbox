@@ -12,7 +12,7 @@ Jenkins запускается сервисом `autotests` в том же ко�
 2. Задать переменные по корневому `.env.example`:
 
    ```dotenv
-   API_BASE_URL=https://api.api-sandbox.merlant.xyz
+   API_BASE_URL=https://api.apisandbox.mnrg.tech
    JENKINS_ADMIN_USER=admin
    JENKINS_ADMIN_PASSWORD=<длинный уникальный пароль>
    E2E_WAIT_SECONDS=90
@@ -27,24 +27,18 @@ Jenkins запускается сервисом `autotests` в том же ко�
 
 3. Выполнить Deploy/redeploy основного Compose. Первичная сборка скачает Jenkins,
    плагины и Python-зависимости.
-4. Создать DNS для Jenkins-домена, например `tests.api-sandbox.merlant.xyz`.
+4. Создать DNS для Jenkins-домена, например `tests.apisandbox.mnrg.tech`.
    В Dokploy назначить его сервису **`autotests`, порт `8080`**, HTTPS/Let's Encrypt.
    TLS завершается на Dokploy; внутри контейнер принимает HTTP.
 5. Открыть домен, войти с заданными credentials. Job `api-sandbox-e2e` создаётся
    автоматически. Для корректных абсолютных ссылок задать свой домен в
    **Manage Jenkins → System → Jenkins URL**.
 
-Для временного доступа в обход TLS используйте `http://SERVER_IP:8891`.
-Порт задаётся через `JENKINS_HTTP_PORT` (по умолчанию `8891`); Jenkins URL
-в настройках должен соответствовать этому адресу. API опубликован на
-`http://SERVER_IP:8890`: укажите его в `API_BASE_URL` в Environment Dokploy
-перед redeploy или в параметрах конкретной сборки Jenkins.
-Для full-прогона также задайте в Environment Dokploy
-`MOCK_PUBLIC_BASE_URL=http://SERVER_IP:8892`: gateway опубликован на порту `8892`
-(`MOCK_GATEWAY_HTTP_PORT`). Переменная применяется сервисами API и runtime worker;
-одна смена параметра сборки `API_BASE_URL` не меняет возвращаемые `public_url`.
+Для full-прогона задайте в Environment Dokploy
+`MOCK_PUBLIC_BASE_URL=https://mockserver.apisandbox.mnrg.tech` и выполните redeploy.
+API и runtime worker используют эту переменную для адресов моков, к которым обращается Jenkins.
 Если публичный ответ не содержит соответствующего `X-Request-ID` gateway,
-тест завершится с указанием проверить URL/маршрутизацию, даже когда получен `404`.
+тест завершится с указанием проверить URL и маршрутизацию, даже когда получен `404`.
 
 Без admin-пароля контейнер не запускается. Саморегистрация и анонимный доступ
 закрыты; CSRF-защита включена. Аккаунт создаётся один раз на постоянном volume;
