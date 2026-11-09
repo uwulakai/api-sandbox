@@ -5,6 +5,7 @@
 ## Архитектура MVP
 
 - `backend/api` — публичный control-plane API.
+- `frontend` — интерфейс React и TypeScript для настройки и проверки моков.
 - `backend/runtime_worker` — синхронизация состояния Mock-серверов с Docker.
 - `mock_runtime` — фиксированный runtime-образ одной API-заглушки.
 - `mock_gateway` — внутренний HTTP gateway для маршрутизации запросов к Mock-контейнерам по Docker DNS.
@@ -29,15 +30,17 @@ docker network create api-sandbox-public
 docker compose build mock_runtime_image
 ```
 
-4. Запустить control plane:
+4. Запустить приложение:
 
 ```powershell
-docker compose up --build -d postgres api runtime_worker mock_gateway autotests
+docker compose up --build -d
 ```
+
+5. Открыть `http://localhost:8893`. Порт на компьютере можно поменять через `FRONTEND_HTTP_PORT`.
 
 В Dokploy сеть `api-sandbox-mocks` должна существовать заранее: это external-сеть для динамических Mock-контейнеров. Dokploy подключает сервисы с доменами к сети внешнего Traefik; в режиме Isolated Deployments это отдельная сеть проекта. Домен `mock-server.api-sandbox.merlant.xyz` направляется на `mock_gateway:8080`.
 
-Для `api`, `mock_gateway` и `autotests` явно задан label `traefik.docker.network`. Переменная `TRAEFIK_DOCKER_NETWORK` должна содержать точное имя общей сети этих сервисов и Traefik: `dokploy-network` при стандартном размещении либо имя сети проекта при Isolated Deployments. Например, для текущего изолированного стенда в Environment Dokploy:
+Для `api`, `mock_gateway`, `frontend` и `autotests` явно задан label `traefik.docker.network`. Переменная `TRAEFIK_DOCKER_NETWORK` должна содержать точное имя общей сети этих сервисов и Traefik: `dokploy-network` при стандартном размещении либо имя сети проекта при Isolated Deployments. Например, для текущего изолированного стенда в Environment Dokploy:
 
 ```dotenv
 TRAEFIK_DOCKER_NETWORK=apisandbox-monolite-uw4fku
@@ -48,6 +51,21 @@ TRAEFIK_DOCKER_NETWORK=apisandbox-monolite-uw4fku
 Внешний Traefik/Dokploy используется только для TLS и передачи запроса в `mock_gateway`. Mock-контейнеры не содержат Traefik labels и не предоставляют gateway доступ к Docker socket.
 
 `runtime_worker` владеет lifecycle Mock-контейнеров. При запуске Compose он сначала удаляет старые managed-контейнеры и поднимает Mock-серверы с `desired_status=running`. При штатной остановке Compose worker обрабатывает `SIGTERM`, удаляет managed-контейнеры, а следующий запуск Compose восстанавливает активные Mock-серверы. Рестарт только `api` Mock-контейнеры не затрагивает.
+
+## Фронтенд
+
+В интерфейсе можно зарегистрироваться, создать и запустить мок, настроить эндпоинт и отправить пробный запрос. Публичный URL из карточки пригодится для проверки из curl или Postman. Вкладка «Проверка» отправляет запрос через внутренний `mock_gateway` и показывает HTTP-код, время, заголовки и тело ответа.
+
+Для публикации через Dokploy добавьте домен для сервиса `frontend` с контейнерным портом `8080`, включите HTTPS и разверните Compose. Фронтенд обращается к `api` и `mock_gateway` по именам сервисов. Отдельные публичные адреса API и настройки CORS для интерфейса не требуются.
+
+Для разработки с обновлением страницы при изменениях запустите API и gateway, затем из каталога `frontend` (Node.js 24+):
+
+```powershell
+npm ci
+npm run dev
+```
+
+Vite выводит адрес приложения. По умолчанию прокси использует локальные порты `8890` и `8892`. Если сервисы запущены на других адресах, задайте `API_UPSTREAM` и `MOCK_GATEWAY_UPSTREAM` в окружении перед запуском. Команда `npm run build` проверяет типы и собирает production-версию.
 
 ## Прямой HTTP-доступ
 
