@@ -19,8 +19,8 @@ export function Status({ status }: { status: RuntimeStatus }) {
 export function Brand() {
   return (
     <div className="brand">
-      <span className="brand-icon" aria-hidden="true">{'{ }'}</span>
-      <span>API Sandbox<small>Конструктор API-заглушек</small></span>
+      <span className="brand-icon" aria-hidden="true"><span>✦</span></span>
+      <span>API Sandbox<small>Ваше пространство API</small></span>
     </div>
   );
 }

@@ -42,7 +42,7 @@ export function Probe({ mock, target, call }: { mock: Mock; target: ProbeTarget;
 
   return <section className="panel probe-panel">
     <div className="panel-heading">
-      <div><h2>Проверка запроса</h2><p>Запрос пройдёт через внутренний mock gateway.</p></div>
+      <div><h2>Проверка запроса</h2><p>Запрос пройдет через внутренний mock gateway.</p></div>
     </div>
     <form onSubmit={send}>
       <div className="request-row">
@@ -51,7 +51,7 @@ export function Probe({ mock, target, call }: { mock: Mock; target: ProbeTarget;
         </select></label>
         <label>Путь и параметры<input value={path} onChange={event => setPath(event.target.value)} required
           className="mono" maxLength={4096} placeholder="/users?limit=10" disabled={busy} /></label>
-        <button className="primary" disabled={busy}>{busy ? 'Ждём ответ…' : 'Отправить'}</button>
+        <button className="primary" disabled={busy}>{busy ? 'Ждем ответ…' : 'Отправить'}</button>
       </div>
       {canSendBody && <label>Тело запроса (JSON, необязательно)
         <textarea name="body" className="mono" rows={3} placeholder="{}" disabled={busy} />

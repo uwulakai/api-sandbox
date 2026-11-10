@@ -168,11 +168,11 @@ export function MockDetail({ mock, call, busy, onEdit, onDelete, onRuntime, onEn
         defaultValue={edited ? JSON.stringify(edited.response_body, null, 2) : '{\n  "ok": true\n}'} required /></label>
       <label>Заголовки ответа (JSON)<textarea name="response_headers" className="mono" rows={3}
         defaultValue={JSON.stringify(edited?.response_headers ?? {}, null, 2)} required /></label>
-      <label className="check"><input name="enabled" type="checkbox" defaultChecked={edited?.enabled ?? true} /> Эндпоинт включён</label>
+      <label className="check"><input name="enabled" type="checkbox" defaultChecked={edited?.enabled ?? true} /> Эндпоинт включен</label>
     </Editor>}
     {deleting && <Editor title="Удалить эндпоинт?" submitLabel="Удалить" destructive
       onClose={() => setDeleting(null)} onSave={() => deleteEndpoint(deleting)}>
-      <p>Маршрут <code>{deleting.method} {deleting.path}</code> будет удалён.</p>
+      <p>Маршрут <code>{deleting.method} {deleting.path}</code> будет удален.</p>
     </Editor>}
   </>;
 }

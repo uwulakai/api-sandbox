@@ -79,6 +79,7 @@ export function Workspace({ user, call, onLogout }: { user: User; call: Request;
   return <div className="workspace">
     <aside className="sidebar">
       <Brand />
+      <div className="sidebar-profile"><span className="avatar">{user.email.slice(0, 1).toUpperCase()}</span><div><strong>Мое пространство</strong><small>{user.email}</small></div></div>
       <div className="sidebar-heading">
         <h2>Мои моки <span>{mocks?.length ?? '—'}</span></h2>
         <button aria-label="Обновить список" title="Обновить список" onClick={reload}>↻</button>
@@ -97,6 +98,7 @@ export function Workspace({ user, call, onLogout }: { user: User; call: Request;
       </footer>
     </aside>
     <main className="workspace-main">
+      <div className="workspace-topbar"><span className="topbar-title">Рабочая область</span><span className="connection"><i /> Система онлайн</span></div>
       <ErrorNotice message={error || actionError} />
       {selected ? <MockDetail key={selected.id} mock={selected} call={call} busy={busy}
         onEdit={() => setEditing(selected)} onDelete={() => setDeleting(selected)}
@@ -109,7 +111,11 @@ export function Workspace({ user, call, onLogout }: { user: User; call: Request;
         </section> : <p role="status" className="muted">Загружаем моки…</p>}
     </main>
     {editing && <Editor title={edited ? 'Настройки мока' : 'Новый мок'} onClose={() => setEditing(null)} onSave={saveMock}>
-      <label>Название<input name="name" required maxLength={120} defaultValue={edited?.name} placeholder="Например, Users API" /></label>
+      <label>Название<input name="name" required maxLength={120} defaultValue={edited?.name} placeholder="Например, Users API"
+        onFocus={event => {
+          const input = event.currentTarget;
+          input.setSelectionRange(input.value.length, input.value.length);
+        }} /></label>
       <label>Описание<textarea name="description" rows={3} maxLength={500} defaultValue={edited?.description ?? ''} /></label>
       {!edited && <label className="check"><input name="start" type="checkbox" defaultChecked /> Запустить после создания</label>}
     </Editor>}
