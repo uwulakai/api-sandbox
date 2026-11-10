@@ -1,9 +1,12 @@
 from collections.abc import AsyncIterator
 import logging
+from pathlib import Path
 
+from alembic import command
+from alembic.config import Config
 from fastapi import HTTPException
+from sqlalchemy import Connection, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlmodel import SQLModel
 
 from app.config import settings
 
@@ -11,7 +14,7 @@ from app.config import settings
 logger = logging.getLogger("api_sandbox.database")
 
 
-engine = create_async_engine(settings.database_url, echo=settings.debug)
+engine = create_async_engine(settings.database_url, echo=settings.debug, hide_parameters=True)
 session_factory = async_sessionmaker(
     engine,
     class_=AsyncSession,
@@ -30,16 +33,15 @@ async def get_session() -> AsyncIterator[AsyncSession]:
             raise
 
 
-async def initialize_database() -> None:
-    # Temporary bootstrap for the first vertical slice. This will be replaced by
-    # a versioned Alembic migration before production deployment.
-    from app.entities.models import Mock, MockEndpoint, Session, User  # noqa: F401
+def upgrade_schema(connection: Connection) -> None:
+    if connection.dialect.name == "postgresql":
+        connection.execute(text("SELECT pg_advisory_xact_lock(2133765491)"))
+    config = Config()
+    config.set_main_option("script_location", str(Path(__file__).resolve().parents[1] / "migrations"))
+    config.attributes["connection"] = connection
+    command.upgrade(config, "head")
 
-    logger.info("Database initialization started")
-    try:
-        async with engine.begin() as connection:
-            await connection.run_sync(SQLModel.metadata.create_all)
-    except Exception:
-        logger.exception("Database initialization failed")
-        raise
-    logger.info("Database initialization completed")
+
+async def initialize_database() -> None:
+    async with engine.begin() as connection:
+        await connection.run_sync(upgrade_schema)

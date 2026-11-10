@@ -3,7 +3,6 @@ import logging
 import math
 import os
 from pathlib import Path
-import secrets
 import time
 from urllib.parse import urlsplit
 from uuid import uuid4
@@ -48,7 +47,7 @@ class LiveAPI:
             Path(self.report_dir).mkdir(parents=True, exist_ok=True)
             Path(self.report_dir, "resources.json").write_text(json.dumps({
                 "run_id": self.run_id, "api_url": self.base,
-                "accounts": [{"email": a["email"], "registration": a["registration"],
+                "accounts": [{"email": a["email"], "login": a["login"],
                               "session_cleanup": a["session_cleanup"]} for a in self.accounts],
                 "mocks": self.resources,
             }, indent=2), encoding="utf-8")
@@ -80,17 +79,24 @@ class LiveAPI:
             )
         return response
 
-    def account(self):
-        email = f"e2e-{uuid4().hex}@example.com"
-        password = secrets.token_urlsafe(24)
+    def account(self, role):
+        keys = [f"E2E_{account_role}_{field}" for account_role in ("OWNER", "OTHER")
+                for field in ("EMAIL", "PASSWORD")]
+        missing = [key for key in keys if not os.environ.get(key)]
+        if missing:
+            pytest.fail("Full E2E requires confirmed test accounts. Set " + ", ".join(missing), pytrace=False)
+        if os.environ["E2E_OWNER_EMAIL"].strip().casefold() == os.environ["E2E_OTHER_EMAIL"].strip().casefold():
+            pytest.fail("Full E2E requires two different confirmed test accounts", pytrace=False)
+        email = os.environ[f"E2E_{role.upper()}_EMAIL"].strip().lower()
+        password = os.environ[f"E2E_{role.upper()}_PASSWORD"]
         account = {"email": email, "password": password, "tokens": [],
-                   "registration": "unknown", "session_cleanup": "pending"}
+                   "login": "unknown", "session_cleanup": "pending"}
         self.accounts.append(account)
         self.save_resources()
-        response = self.request("POST", "/api/v1/auth/register", expected=201,
+        response = self.request("POST", "/api/v1/auth/login", expected=200,
                                 json={"email": email, "password": password})
         token = response.json()["token"]
-        account.update(token=token, tokens=[token], registration="created")
+        account.update(token=token, tokens=[token], login="succeeded")
         self.save_resources()
         return account
 
@@ -176,12 +182,12 @@ def api():
 
 @pytest.fixture(scope="session")
 def owner(api):
-    return api.account()
+    return api.account("owner")
 
 
 @pytest.fixture(scope="session")
 def other(api):
-    return api.account()
+    return api.account("other")
 
 
 @pytest.fixture
@@ -216,7 +222,7 @@ def mocks(api, owner):
             try:
                 if data is None:
                     # A timed-out POST may have committed. Recover only this attempt,
-                    # by its unique name and the same disposable account's token.
+                    # by its unique name and the same test account's token.
                     listed = api.request("GET", "/api/v1/mocks", token=token, expected=200).json()
                     matches = [mock for mock in listed if mock["name"] == record["name"]]
                     if len(matches) != 1:

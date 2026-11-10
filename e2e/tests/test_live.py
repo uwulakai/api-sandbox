@@ -14,9 +14,8 @@ def test_authentication_required(api, token):
     api.request("GET", "/api/v1/mocks", token=token, expected=401)
 
 
-def test_registration_login_logout(api, owner):
+def test_login_logout(api, owner):
     credentials = {"email": owner["email"], "password": owner["password"]}
-    api.request("POST", "/api/v1/auth/register", json=credentials, expected=409)
     api.request("POST", "/api/v1/auth/login", expected=401,
                 json={**credentials, "password": "definitely-wrong-password"})
     login = api.request("POST", "/api/v1/auth/login", json=credentials, expected=200)
@@ -75,16 +74,23 @@ def test_endpoint_update_delay_disable_and_delete(api, owner, mocks):
     token = owner["token"]
     endpoint = api.endpoint(mock, token)
     path = f"/api/v1/mocks/{mock['id']}/endpoints/{endpoint['id']}"
+    api.request("PATCH", f"/api/v1/mocks/{mock['id']}", token=token, expected=200, json={
+        "default_response_headers": {"x-revision": "default", "X-Environment": "e2e"},
+        "default_delay_ms": 300,
+    })
     api.action(mock, token, "start")
     api.wait_public(mock, body={"run": api.run_id})
-    api.request("PATCH", path, token=token, expected=200, json={
+    endpoint = api.request("PATCH", path, token=token, expected=200, json={
+        "name": "Updated endpoint",
         "status_code": 201, "response_body": {"updated": True},
         "response_headers": {"X-Revision": "two"}, "delay_ms": 800,
-    })
+    }).json()
+    assert endpoint["name"] == "Updated endpoint"
     api.wait_state(mock, token)
     response = api.wait_public(mock, status=201, body={"updated": True})
     assert response.headers["x-revision"] == "two"
-    assert response.elapsed.total_seconds() >= 0.70, "Configured response delay was not applied"
+    assert response.headers["x-environment"] == "e2e"
+    assert response.elapsed.total_seconds() >= 1.05, "Combined response delay was not applied"
     api.request("PATCH", path, token=token, json={"enabled": False}, expected=200)
     api.wait_state(mock, token)
     api.wait_public(mock, status=404)

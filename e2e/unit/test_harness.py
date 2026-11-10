@@ -23,6 +23,10 @@ def client(monkeypatch, tmp_path):
     monkeypatch.setenv("E2E_RUN_ID", "offline")
     monkeypatch.delenv("E2E_HTTP_TIMEOUT", raising=False)
     monkeypatch.delenv("E2E_WAIT_SECONDS", raising=False)
+    monkeypatch.setenv("E2E_OWNER_EMAIL", "owner@example.com")
+    monkeypatch.setenv("E2E_OWNER_PASSWORD", "private-owner-password")
+    monkeypatch.setenv("E2E_OTHER_EMAIL", "other@example.com")
+    monkeypatch.setenv("E2E_OTHER_PASSWORD", "private-other-password")
     api = support.LiveAPI()
     api.client.close()
     yield api
@@ -75,24 +79,35 @@ def test_timeouts_are_logged_without_retrying_writes(client, caplog):
 
 def test_resource_manifest_never_contains_credentials(client):
     client.client = httpx.Client(transport=httpx.MockTransport(
-        lambda request: httpx.Response(201, json={"token": "private-token"})
+        lambda request: httpx.Response(200, json={"token": "private-token"})
     ))
-    account = client.account()
+    account = client.account("owner")
     raw = Path(client.report_dir, "resources.json").read_text(encoding="utf-8")
     assert account["email"] in raw
     assert account["password"] not in raw and "private-token" not in raw
-    assert json.loads(raw)["accounts"][0]["registration"] == "created"
+    assert json.loads(raw)["accounts"][0]["login"] == "succeeded"
 
 
-def test_unknown_registration_is_recorded(client):
+def test_unknown_login_is_recorded(client):
     def handler(request):
         raise httpx.ReadTimeout("timeout", request=request)
 
     client.client = httpx.Client(transport=httpx.MockTransport(handler))
     with pytest.raises(pytest.fail.Exception):
-        client.account()
+        client.account("owner")
     manifest = json.loads(Path(client.report_dir, "resources.json").read_text(encoding="utf-8"))
-    assert manifest["accounts"][0]["registration"] == "unknown"
+    assert manifest["accounts"][0]["login"] == "unknown"
+
+
+def test_full_requires_two_distinct_accounts(client, monkeypatch):
+    monkeypatch.delenv("E2E_OTHER_PASSWORD")
+    with pytest.raises(pytest.fail.Exception, match="E2E_OTHER_PASSWORD"):
+        client.account("owner")
+    monkeypatch.setenv("E2E_OTHER_PASSWORD", "private-other-password")
+    monkeypatch.setenv("E2E_OTHER_EMAIL", "OWNER@example.com")
+    with pytest.raises(pytest.fail.Exception, match="two different"):
+        client.account("owner")
+    assert client.accounts == []
 
 
 def test_readiness_waits_for_new_response(client, monkeypatch):

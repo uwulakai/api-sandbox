@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Подтвердите почту</title>
+  </head>
+  <body style="margin:0;background:#f3f6f4;color:#172c26;font-family:Arial,sans-serif">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+      <tr>
+        <td align="center" style="padding:24px 12px">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
+                 style="max-width:560px;background:#fff;border:1px solid #d8e5de;border-radius:12px">
+            <tr>
+              <td style="padding:28px">
+                <p style="font-weight:bold;color:#08745c">API Sandbox</p>
+                <h1 style="font-size:24px">Подтвердите почту</h1>
+                <p>Откройте ссылку и задайте пароль, чтобы завершить регистрацию.</p>
+                <p style="margin:24px 0">
+                  <a href="${verification_url}" style="display:inline-block;padding:12px 18px;background:#08745c;color:#fff;border-radius:8px;text-decoration:none">
+                    Продолжить регистрацию
+                  </a>
+                </p>
+                <p style="font-size:14px;color:#526760">
+                  Ссылка действует ${ttl_minutes} мин. Если вы не запрашивали регистрацию, проигнорируйте письмо.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

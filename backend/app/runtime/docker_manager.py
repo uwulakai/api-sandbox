@@ -37,6 +37,8 @@ class DockerRuntimeManager:
             {
                 "mock_id": mock.id,
                 "config_version": mock.config_version,
+                "default_response_headers": mock.default_response_headers,
+                "default_delay_ms": mock.default_delay_ms,
                 "endpoints": [
                     {
                         "method": endpoint.method,

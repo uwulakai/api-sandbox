@@ -4,11 +4,13 @@ from time import perf_counter
 from uuid import uuid4
 
 from fastapi import FastAPI, Request
+from fastapi.exception_handlers import request_validation_exception_handler
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.config import settings
-from app.core.database import initialize_database
+from app.core.database import engine
 from app.entities.mocks.router import router as mocks_router
 from app.entities.users.router import router as auth_router
 from app.health import router as health_router
@@ -38,19 +40,11 @@ async def lifespan(_: FastAPI):
         settings.app_version,
         settings.database_url.split(":", maxsplit=1)[0],
     )
-    try:
-        await initialize_database()
-    except Exception:
-        logger.exception("API startup failed during database initialization")
-        raise
-
     logger.info("API startup completed")
     try:
         yield
     finally:
         logger.info("API shutdown started")
-        from app.core.database import engine
-
         await engine.dispose()
         logger.info("API shutdown completed")
 
@@ -110,6 +104,18 @@ def create_app() -> FastAPI:
             request.client.host if request.client else "unknown",
         )
         return response
+
+    @app.exception_handler(RequestValidationError)
+    async def validation_error_handler(request: Request, exc: RequestValidationError):
+        if request.url.path.startswith("/api/v1/auth/"):
+            return JSONResponse(
+                status_code=422,
+                content={"detail": [
+                    {key: error[key] for key in ("loc", "msg", "type")}
+                    for error in exc.errors()
+                ]},
+            )
+        return await request_validation_exception_handler(request, exc)
 
     @app.exception_handler(Exception)
     async def unhandled_exception_handler(request: Request, exc: Exception):

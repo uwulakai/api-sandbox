@@ -35,6 +35,14 @@ services:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-api_sandbox}:${POSTGRES_PASSWORD:-api_sandbox}@postgres:5432/${POSTGRES_DB_NAME:-api_sandbox}
       MOCK_RUNTIME_IMAGE: ${MOCK_RUNTIME_IMAGE:-api-sandbox/mock-runtime:dev}
       MOCK_PUBLIC_BASE_URL: ${MOCK_PUBLIC_BASE_URL:-http://mock_gateway:8080}
+      FRONTEND_PUBLIC_URL: ${FRONTEND_PUBLIC_URL:-}
+      SMTP_HOSTNAME: ${SMTP_HOSTNAME:-smtp.yandex.com}
+      SMTP_PORT: ${SMTP_PORT:-465}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_TIMEOUT_SECONDS: ${SMTP_TIMEOUT_SECONDS:-8}
+      EMAIL_VERIFICATION_TTL_MINUTES: ${EMAIL_VERIFICATION_TTL_MINUTES:-30}
+      EMAIL_VERIFICATION_RESEND_SECONDS: ${EMAIL_VERIFICATION_RESEND_SECONDS:-60}
     depends_on:
       postgres:
         condition: service_healthy
@@ -130,6 +138,10 @@ services:
       API_BASE_URL: ${API_BASE_URL:-https://api.apisandbox.mnrg.tech}
       E2E_WAIT_SECONDS: ${E2E_WAIT_SECONDS:-90}
       E2E_CRON: ${E2E_CRON:-}
+      E2E_OWNER_EMAIL: ${E2E_OWNER_EMAIL:-}
+      E2E_OWNER_PASSWORD: ${E2E_OWNER_PASSWORD:-}
+      E2E_OTHER_EMAIL: ${E2E_OTHER_EMAIL:-}
+      E2E_OTHER_PASSWORD: ${E2E_OTHER_PASSWORD:-}
     volumes:
       - jenkins_data:/var/jenkins_home
     expose:

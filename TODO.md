@@ -12,7 +12,7 @@
 
 ### Authentication and authorization
 
-- [x] User registration with email and password.
+- [x] User registration with email verification and password setup.
 - [x] Login and logout.
 - [x] Current-user endpoint.
 - [x] Server-side bearer sessions with hashed tokens.
@@ -76,8 +76,8 @@ The list below is a product backlog, not an instruction to implement everything 
 - [ ] Mock name and description.
 - [ ] API prefix/base path.
 - [ ] Public base URL.
-- [ ] Environment-level response headers.
-- [ ] Environment-level latency.
+- [x] Environment-level response headers.
+- [x] Environment-level latency.
 - [ ] Random latency between zero and a configured maximum.
 - [ ] Automatic CORS preflight handling.
 - [ ] Configurable CORS headers.
@@ -97,7 +97,7 @@ The list below is a product backlog, not an instruction to implement everything 
 - [ ] Regular-expression routes.
 - [ ] Route ordering and precedence.
 - [ ] Enabled/disabled routes.
-- [ ] Route name and description.
+- [x] Route name and description.
 - [ ] Query parameters excluded from the route declaration but available for rules and templates.
 - [ ] Route documentation metadata.
 
@@ -203,7 +203,7 @@ The list below is a product backlog, not an instruction to implement everything 
 
 ## Architectural follow-ups
 
-- [ ] Add Alembic migrations and remove startup `SQLModel.metadata.create_all` from production flow.
+- [x] Add Alembic migrations and remove startup `SQLModel.metadata.create_all` from production flow.
 - [ ] Decide whether configuration updates recreate the container or use an internal runtime admin API.
 - [ ] Define a versioned native Mock configuration schema.
 - [ ] Define the exact route conflict algorithm and precedence rules.

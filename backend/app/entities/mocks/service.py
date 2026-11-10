@@ -35,12 +35,7 @@ def touch_mock(mock: Mock) -> None:
 
 
 async def create_mock(session: AsyncSession, user: User, payload: MockCreate) -> Mock:
-    mock = Mock(
-        owner_id=user.id,
-        name=payload.name,
-        description=payload.description,
-        desired_status=payload.desired_status,
-    )
+    mock = Mock(owner_id=user.id, **payload.model_dump())
     session.add(mock)
     await session.commit()
     await session.refresh(mock)

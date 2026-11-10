@@ -34,6 +34,15 @@ class Session(SQLModel, table=True):
     created_at: datetime = Field(default_factory=utc_now)
 
 
+class EmailVerification(SQLModel, table=True):
+    __tablename__ = "email_verifications"
+
+    email: str = Field(primary_key=True, max_length=320)
+    token_hash: str = Field(unique=True, max_length=64)
+    expires_at: datetime = Field(index=True)
+    resend_at: datetime
+
+
 class Mock(SQLModel, table=True):
     __tablename__ = "mocks"
 
@@ -41,6 +50,10 @@ class Mock(SQLModel, table=True):
     owner_id: int = Field(foreign_key="users.id", index=True)
     name: str = Field(max_length=120)
     description: str | None = Field(default=None, max_length=500)
+    default_response_headers: dict[str, str] = Field(
+        default_factory=dict, sa_column=Column(JSON, nullable=False),
+    )
+    default_delay_ms: int = Field(default=0, ge=0, le=60_000)
     desired_status: MockDesiredStatus = Field(default=MockDesiredStatus.RUNNING)
     runtime_status: MockRuntimeStatus = Field(default=MockRuntimeStatus.PENDING)
     deletion_requested: bool = False
@@ -61,6 +74,8 @@ class MockEndpoint(SQLModel, table=True):
     mock_id: str = Field(foreign_key="mocks.id", index=True)
     method: str = Field(max_length=10, index=True)
     path: str = Field(max_length=2048)
+    name: str | None = Field(default=None, max_length=120)
+    description: str | None = Field(default=None, max_length=500)
     status_code: int = Field(default=200, ge=100, le=599)
     response_headers: dict[str, str] = Field(
         default_factory=dict,

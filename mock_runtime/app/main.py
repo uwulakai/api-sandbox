@@ -44,12 +44,14 @@ async def handle_request(request: Request, path: str) -> JSONResponse:
             content={"detail": "Mock endpoint not found"},
         )
 
-    delay_ms = int(endpoint.get("delay_ms", 0))
+    delay_ms = min(config.get("default_delay_ms", 0) + int(endpoint.get("delay_ms", 0)), 60_000)
     if delay_ms:
         await asyncio.sleep(delay_ms / 1000)
 
+    headers = {key.lower(): value for key, value in config.get("default_response_headers", {}).items()}
+    headers.update({key.lower(): value for key, value in (endpoint.get("response_headers") or {}).items()})
     return JSONResponse(
         status_code=int(endpoint.get("status_code", 200)),
         content=endpoint.get("response_body"),
-        headers=endpoint.get("response_headers") or {},
+        headers=headers,
     )

@@ -36,7 +36,7 @@ def job = server.getItem('api-sandbox-e2e')
 if (job == null) {
     job = server.createProject(WorkflowJob, 'api-sandbox-e2e')
 }
-job.setDescription('Real HTTP tests of API Sandbox. Full creates test accounts and disposable mocks; smoke is read-only.')
+job.setDescription('Real HTTP tests of API Sandbox. Full uses two confirmed test accounts and creates disposable mocks; smoke is read-only.')
 job.setDefinition(new CpsFlowDefinition(new File('/opt/automation/Jenkinsfile').text, true))
 job.addProperty(new ParametersDefinitionProperty(
     new StringParameterDefinition('API_BASE_URL', env.API_BASE_URL, 'API origin, without /api/v1'),

@@ -6,8 +6,10 @@ from app.core.database import engine, initialize_database
 
 
 async def main() -> None:
-    await initialize_database()
-    await engine.dispose()
+    try:
+        await initialize_database()
+    finally:
+        await engine.dispose()
 
 
 if __name__ == "__main__":

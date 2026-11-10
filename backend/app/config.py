@@ -1,4 +1,4 @@
-from pydantic import Field
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -16,6 +16,14 @@ class Settings(BaseSettings):
 
     database_url: str = "sqlite+aiosqlite:///./api_sandbox.db"
     session_lifetime_days: int = Field(default=30, ge=1, le=3650)
+    frontend_public_url: str = ""
+    smtp_hostname: str = "smtp.yandex.com"
+    smtp_port: int = Field(default=465, ge=1, le=65535)
+    smtp_username: str = ""
+    smtp_password: SecretStr = SecretStr("")
+    smtp_timeout_seconds: float = Field(default=8.0, gt=0, le=10)
+    email_verification_ttl_minutes: int = Field(default=30, ge=2, le=1440)
+    email_verification_resend_seconds: int = Field(default=60, ge=10, le=120)
 
     mock_runtime_image: str = "api-sandbox/mock-runtime:dev"
     mock_network_name: str = "api-sandbox-mocks"
