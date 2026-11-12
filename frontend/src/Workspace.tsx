@@ -3,6 +3,8 @@ import { ApiError, errorMessage, mockPath, mocksPath } from './api';
 import type { Mock, Request, User } from './api';
 import { Brand, Editor, ErrorNotice, Status } from './ui';
 import { MockDetail } from './MockDetail';
+import { DefaultHeadersEditor } from './DefaultHeadersEditor';
+import { mockDefaultsFromForm } from './mockSettings';
 
 export function Workspace({ user, call, onLogout }: { user: User; call: Request; onLogout: () => Promise<void> }) {
   const [mocks, setMocks] = useState<Mock[] | null>(null);
@@ -44,7 +46,8 @@ export function Workspace({ user, call, onLogout }: { user: User; call: Request;
     const existing = editing && editing !== 'new' ? editing : null;
     const saved = await call<Mock>(existing ? mockPath(existing.id) : mocksPath, {
       method: creating ? 'POST' : 'PATCH',
-      body: { name, description, ...(creating && { desired_status: fields.get('start') ? 'running' : 'stopped' }) },
+      body: { name, description, ...mockDefaultsFromForm(fields),
+        ...(creating && { desired_status: fields.get('start') ? 'running' : 'stopped' }) },
     });
     setMocks(previous => creating
       ? [saved, ...(previous ?? [])]
@@ -102,7 +105,11 @@ export function Workspace({ user, call, onLogout }: { user: User; call: Request;
       <ErrorNotice message={error || actionError} />
       {selected ? <MockDetail key={selected.id} mock={selected} call={call} busy={busy}
         onEdit={() => setEditing(selected)} onDelete={() => setDeleting(selected)}
-        onRuntime={command => void changeRuntime(selected, command)} onEndpointsChanged={reload} />
+        onRuntime={command => void changeRuntime(selected, command)} onEndpointsChanged={() => {
+          setMocks(previous => previous?.map(mock => mock.id === selected.id
+            ? { ...mock, runtime_status: 'pending' } : mock) ?? null);
+          reload();
+        }} />
         : mocks ? <section className="empty-state">
           <span className="empty-icon" aria-hidden="true">{'{ }'}</span>
           <h1>Создайте первый мок</h1>
@@ -117,6 +124,10 @@ export function Workspace({ user, call, onLogout }: { user: User; call: Request;
           input.setSelectionRange(input.value.length, input.value.length);
         }} /></label>
       <label>Описание<textarea name="description" rows={3} maxLength={500} defaultValue={edited?.description ?? ''} /></label>
+      <DefaultHeadersEditor initialHeaders={edited?.default_response_headers ?? {}} />
+      <label>Общая задержка, мс<input name="default_delay_ms" type="number" min={0} max={60000} step={1}
+        defaultValue={edited?.default_delay_ms ?? 0} required aria-describedby="default-delay-hint" /></label>
+      <p className="auth-hint" id="default-delay-hint">Складывается с задержкой эндпоинта. Итоговая задержка не превышает 60 000 мс. После сохранения дождитесь статуса «Работает» перед проверкой.</p>
       {!edited && <label className="check"><input name="start" type="checkbox" defaultChecked /> Запустить после создания</label>}
     </Editor>}
     {deleting && <Editor title="Удалить мок?" submitLabel="Удалить" destructive

@@ -19,9 +19,11 @@ export function Probe({ mock, target, call }: { mock: Mock; target: ProbeTarget;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const canSendBody = method !== 'GET' && method !== 'HEAD';
+  const ready = mock.runtime_status === 'running' && mock.desired_status === 'running';
 
   async function send(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!ready || busy) return;
     const fields = new FormData(event.currentTarget);
     setBusy(true);
     setResult(null);
@@ -42,8 +44,11 @@ export function Probe({ mock, target, call }: { mock: Mock; target: ProbeTarget;
 
   return <section className="panel probe-panel">
     <div className="panel-heading">
-      <div><h2>Проверка запроса</h2><p>Запрос пройдет через внутренний mock gateway.</p></div>
+      <div><h2>Проверка запроса</h2><p>Проверьте ответ с учетом общих заголовков и задержки мока.</p></div>
     </div>
+    {!ready && <p className="runtime-notice" role="status">{mock.desired_status === 'stopped'
+      ? 'Запустите мок перед проверкой.' : mock.runtime_status === 'error'
+        ? 'Мок не запущен из-за ошибки. Проверьте его состояние.' : 'Применяем конфигурацию. Проверка станет доступна, когда мок будет работать.'}</p>}
     <form onSubmit={send}>
       <div className="request-row">
         <label>Метод<select value={method} onChange={event => setMethod(event.target.value as Method)} disabled={busy}>
@@ -51,7 +56,7 @@ export function Probe({ mock, target, call }: { mock: Mock; target: ProbeTarget;
         </select></label>
         <label>Путь и параметры<input value={path} onChange={event => setPath(event.target.value)} required
           className="mono" maxLength={4096} placeholder="/users?limit=10" disabled={busy} /></label>
-        <button className="primary" disabled={busy}>{busy ? 'Ждем ответ…' : 'Отправить'}</button>
+        <button className="primary" disabled={busy || !ready}>{busy ? 'Ждем ответ…' : 'Отправить'}</button>
       </div>
       {canSendBody && <label>Тело запроса (JSON, необязательно)
         <textarea name="body" className="mono" rows={3} placeholder="{}" disabled={busy} />

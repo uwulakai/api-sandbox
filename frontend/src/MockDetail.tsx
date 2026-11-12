@@ -14,6 +14,8 @@ function endpointFields(form: FormData): EndpointFields {
   const path = String(form.get('path')).trim();
   if (!path) throw new ApiError(400, 'Укажите путь эндпоинта.');
   return {
+    name: String(form.get('name') ?? '').trim() || null,
+    description: String(form.get('description') ?? '').trim() || null,
     method: String(form.get('method')) as Method,
     path,
     status_code: Number(form.get('status_code')),
@@ -120,6 +122,10 @@ export function MockDetail({ mock, call, busy, onEdit, onDelete, onRuntime, onEn
         </div>
       </div>
       <span className="copy-note" role="status">{copyNote}</span>
+      <div className="mock-defaults-summary">
+        <span>Общая задержка: <strong>{mock.default_delay_ms ?? 0} мс</strong></span>
+        <span>Общие заголовки: <strong>{Object.keys(mock.default_response_headers ?? {}).length}</strong></span>
+      </div>
     </section>
     <nav className="section-switch" aria-label="Разделы мока">
       <button aria-pressed={!target} onClick={() => setTarget(null)}>Эндпоинты <span>{endpoints?.length ?? '—'}</span></button>
@@ -135,13 +141,17 @@ export function MockDetail({ mock, call, busy, onEdit, onDelete, onRuntime, onEn
         {error && <button onClick={() => setRefresh(value => value + 1)}>Обновить эндпоинты</button>}
         {endpoints?.length ? <div className="endpoint-list">
           {endpoints.map(endpoint => <article key={endpoint.id} className="endpoint-row">
-            <div className="endpoint-route">
-              <span className={`method method-${endpoint.method.toLowerCase()}`}>{endpoint.method}</span>
-              <code>{endpoint.path}</code>
+            <div className="endpoint-info">
+              {endpoint.name && <strong className="endpoint-name">{endpoint.name}</strong>}
+              <div className="endpoint-route">
+                <span className={`method method-${endpoint.method.toLowerCase()}`}>{endpoint.method}</span>
+                <code>{endpoint.path}</code>
+              </div>
+              {endpoint.description && <p className="endpoint-description">{endpoint.description}</p>}
             </div>
             <div className="endpoint-meta">
               <span>HTTP {endpoint.status_code}</span>
-              {endpoint.delay_ms > 0 && <span>{endpoint.delay_ms} мс</span>}
+              {(endpoint.delay_ms > 0 || mock.default_delay_ms > 0) && <span title="Общая задержка + задержка эндпоинта, максимум 60 000 мс">{Math.min(60000, (mock.default_delay_ms ?? 0) + endpoint.delay_ms)} мс</span>}
               {!endpoint.enabled && <span>Выключен</span>}
             </div>
             <div className="actions endpoint-actions">
@@ -154,6 +164,8 @@ export function MockDetail({ mock, call, busy, onEdit, onDelete, onRuntime, onEn
       </section>}
     {editing && <Editor title={edited ? 'Изменить эндпоинт' : 'Новый эндпоинт'}
       onClose={() => setEditing(null)} onSave={saveEndpoint}>
+      <label>Название<input name="name" maxLength={120} defaultValue={edited?.name ?? ''} placeholder="Например, Список пользователей" /></label>
+      <label>Описание<textarea name="description" maxLength={500} rows={2} defaultValue={edited?.description ?? ''} placeholder="Что возвращает этот маршрут" /></label>
       <div className="fields-row">
         <label>Метод<select name="method" defaultValue={edited?.method ?? 'GET'}>
           {methods.map(method => <option key={method}>{method}</option>)}

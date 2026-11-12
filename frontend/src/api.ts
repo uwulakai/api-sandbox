@@ -12,6 +12,8 @@ export interface Mock {
   id: string;
   name: string;
   description: string | null;
+  default_response_headers: Record<string, string>;
+  default_delay_ms: number;
   public_url: string;
   desired_status: DesiredStatus;
   runtime_status: RuntimeStatus;
@@ -20,6 +22,8 @@ export interface Mock {
 }
 
 export interface EndpointFields {
+  name: string | null;
+  description: string | null;
   method: Method;
   path: string;
   status_code: number;
@@ -48,9 +52,28 @@ interface Options {
 
 export type Request = <T>(path: string, options?: Options) => Promise<T>;
 
+export interface ValidationIssue {
+  loc: (string | number)[];
+  msg: string;
+  type: string;
+}
+
 export class ApiError extends Error {
-  constructor(public status: number, message: string) {
+  constructor(public status: number, message: string, public detail?: unknown, public retryAfterSeconds?: number) {
     super(message);
+  }
+
+  get code(): string | undefined {
+    if (typeof this.detail === 'string') return this.detail;
+    if (this.detail && typeof this.detail === 'object' && 'code' in this.detail
+        && typeof this.detail.code === 'string') return this.detail.code;
+    return undefined;
+  }
+
+  get issues(): ValidationIssue[] {
+    if (!Array.isArray(this.detail)) return [];
+    return this.detail.filter((issue): issue is ValidationIssue =>
+      issue && Array.isArray(issue.loc) && typeof issue.msg === 'string' && typeof issue.type === 'string');
   }
 }
 
@@ -77,7 +100,10 @@ export async function request<T>(path: string, { method = 'GET', body, signal }:
     const message = Array.isArray(detail)
       ? detail.map(item => `${item.loc?.slice(1).join('.') || 'Запрос'}: ${item.msg}`).join('\n')
       : typeof detail === 'string' ? detail : `Ошибка HTTP ${response.status}.`;
-    throw new ApiError(response.status, message);
+    const retry = detail?.retry_after_seconds ?? response.headers.get('Retry-After');
+    const retrySeconds = retry == null ? undefined : Number(retry);
+    throw new ApiError(response.status, message, detail,
+      retrySeconds !== undefined && Number.isFinite(retrySeconds) && retrySeconds >= 0 ? retrySeconds : undefined);
   }
   if (response.status !== 204 && data === undefined) {
     throw new ApiError(502, 'Сервис вернул ответ в неожиданном формате.');

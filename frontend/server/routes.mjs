@@ -62,6 +62,7 @@ async function proxyApi(req, res, path) {
     'Cache-Control': 'no-store',
     'X-Content-Type-Options': 'nosniff',
     ...(response.headers['x-request-id'] && { 'X-Request-ID': response.headers['x-request-id'] }),
+    ...(response.headers['retry-after'] && { 'Retry-After': response.headers['retry-after'] }),
   });
   await pipeline(response, res);
 }

@@ -4,7 +4,7 @@ import { handleRoutes } from './routes.mjs';
 
 const port = Number(process.env.PORT || 8080);
 const dist = new URL('../dist/', import.meta.url);
-const types = { js: 'text/javascript', css: 'text/css' };
+const types = { js: 'text/javascript', css: 'text/css', woff2: 'font/woff2', woff: 'font/woff' };
 const policy = "default-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'";
 
 createServer(async (req, res) => {
@@ -16,17 +16,18 @@ createServer(async (req, res) => {
     }
 
     const path = new URL(req.url, 'http://localhost').pathname;
-    const asset = /^\/assets\/([\w-]+)\.(js|css)$/.exec(path);
+    const asset = /^\/assets\/([\w-]+)\.(js|css|woff2|woff)$/.exec(path);
     if (path !== '/' && !asset) {
       res.writeHead(404).end('Not found');
       return;
     }
     const data = await readFile(new URL(asset ? path.slice(1) : 'index.html', dist));
     res.writeHead(200, {
-      'Content-Type': `${asset ? types[asset[2]] : 'text/html'}; charset=utf-8`,
+      'Content-Type': asset && ['woff2', 'woff'].includes(asset[2]) ? types[asset[2]] : `${asset ? types[asset[2]] : 'text/html'}; charset=utf-8`,
       'Cache-Control': asset ? 'public, max-age=31536000, immutable' : 'no-cache',
       'Content-Security-Policy': policy,
       'X-Content-Type-Options': 'nosniff',
+      'Referrer-Policy': 'no-referrer',
     });
     res.end(req.method === 'HEAD' ? undefined : data);
   } catch (error) {
